@@ -28,14 +28,26 @@ def product_of(raw):                                           # the package ide
 
 
 def build_sim(out):
-    """the 3D model (page/sim-src, embed mode) with the real firmware behind its glass: quest/web/sloop.wasm in an AudioWorklet (sim-src/lab-fm1w.js)"""
-    wasm = REPO / "quest" / "web" / "sloop.wasm"
+    """the 3D model (page/sim-src, embed mode) with the real firmware behind its glass: quest/web/fm1quest.wasm in an AudioWorklet (sim-src/lab-fm1w.js)"""
+    wasm = REPO / "quest" / "web" / "fm1quest.wasm"
     if not wasm.exists():
-        raise SystemExit("quest/web/sloop.wasm is missing: build the emulator first (cd quest && CC=zig sh build.sh)")
+        raise SystemExit("quest/web/fm1quest.wasm is missing: build the emulator first (cd quest && CC=zig sh build.sh)")
     SIM = out / "sim"
     shutil.rmtree(SIM, ignore_errors=True)
     shutil.copytree(HERE / "sim-src", SIM)
-    shutil.copy(wasm, SIM / "sloop.wasm")
+    shutil.copy(wasm, SIM / "fm1quest.wasm")
+    # Pages caches files for 10 minutes: version the glass script and the preview clips by content, so a new deploy is never shown stale
+    h = hashlib.sha256()
+    for f in sorted(SIM.glob("*")):
+        if f.is_file():
+            h.update(f.name.encode() + f.read_bytes())
+    v = h.hexdigest()[:10]
+    js = (SIM / "lab-fm1w.js").read_text(encoding="utf-8").replace("'__VQ__'", f"'?v={v}'")
+    (SIM / "lab-fm1w.js").write_text(js, encoding="utf-8")
+    ix = (SIM / "index.html").read_text(encoding="utf-8")
+    assert 'src="lab-fm1w.js"' in ix
+    (SIM / "index.html").write_text(ix.replace('src="lab-fm1w.js"', f'src="lab-fm1w.js?v={v}"'), encoding="utf-8")
+    return v
 
 
 def main(out, pkg, version):
@@ -60,7 +72,7 @@ def main(out, pkg, version):
         shutil.copytree(HERE / d, out / d)
     for f in ("favicon.ico", "favicon-32.png", "apple-touch-icon.png", "android-chrome-192.png", "android-chrome-512.png"):
         shutil.copy(HERE / f, out / f)
-    build_sim(out)
+    simv = build_sim(out)
 
     lib = strip_module((REPO / "web" / "fm1pkg.js").read_text(encoding="utf-8")) + "\n" + strip_module((REPO / "web" / "fm1ota.js").read_text(encoding="utf-8"))
     esc = lambda v: H.escape(v, quote=True)
@@ -84,8 +96,11 @@ def main(out, pkg, version):
         for e in changelog.ENTRIES:
             parts.append(f'<article class="rv" id="cl-{e["id"]}"><h3>{e[L + "_t"]}</h3>')
             if e["clips"]:
-                parts.append('<div class="clips">' + "".join(
-                    f'<video src="{P}media/{c}.mp4" autoplay loop muted playsinline preload="metadata" aria-hidden="true"></video>' for c in e["clips"]) + "</div>")
+                def fig(c):
+                    name, cap = (c, "") if isinstance(c, str) else (c[0], c[1] if L == "pt" else c[2])
+                    return (f'<figure><video src="{P}media/{name}.mp4" autoplay loop muted playsinline preload="metadata" aria-hidden="true"></video>'
+                            + (f'<figcaption>{cap}</figcaption>' if cap else "") + "</figure>")
+                parts.append('<div class="clips">' + "".join(fig(c) for c in e["clips"]) + "</div>")
             parts.append(f'<p>{e[L]}</p>')
             if e["id"] == "sounds":
                 items = "".join(
@@ -117,6 +132,7 @@ def main(out, pkg, version):
         if P:
             html = re.sub(r'(src|href)="(assets|editor|firmware|media)/', lambda mm: f'{mm.group(1)}="../{mm.group(2)}/', html)
             html = html.replace("url(assets/", "url(../assets/").replace('"sim/index.html?embed=1', '"../sim/index.html?embed=1')
+        html = html.replace("sim/index.html?embed=1", "sim/index.html?embed=1&v=" + simv)
         d = out / path
         d.mkdir(parents=True, exist_ok=True)
         (d / "index.html").write_text(html, encoding="utf-8")

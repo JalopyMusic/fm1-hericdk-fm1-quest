@@ -35,15 +35,15 @@ k("hint", "Clique nos botões, gire os knobs, toque as teclas. Funciona também 
   "Haz clic en los botones, gira los knobs, toca las teclas. También funciona con el teclado del ordenador.")
 k("a_model", "Modelo 3D do FM-1 com o firmware rodando", "3D model of the FM-1 running the firmware", "Modelo 3D del FM-1 con el firmware funcionando")
 k("h1", "Firmware para o M-VAVE FM-1", "Firmware for the M-VAVE FM-1", "Firmware para el M-VAVE FM-1")
-k("lead", "O seu groovebox como um RPG em pixel art. As quatro faixas são quatro heróis, cada passo aceso é um ataque, o andamento define a velocidade da caminhada do grupo, a tonalidade escolhe o bioma e gravar um loop é uma luta de chefe. Todas as funções do SLOOP continuam onde estavam, com os mesmos controles.",
-  "Your groovebox as a pixel-art RPG. The four tracks are four heroes, every lit step is an attack, the tempo sets how fast the party walks, the key picks the biome and recording a loop is a boss fight. Every SLOOP function stays where it was, with the same controls.",
-  "Tu groovebox como un RPG en pixel art. Las cuatro pistas son cuatro héroes, cada paso encendido es un ataque, el tempo define la velocidad del grupo, la tonalidad elige el bioma y grabar un loop es una pelea de jefe. Todas las funciones de SLOOP siguen donde estaban, con los mismos controles.")
+k("lead", "O seu groovebox como um RPG em pixel art. As quatro faixas são quatro heróis, cada passo aceso é um ataque, o andamento define a velocidade da caminhada do grupo, o FX ativa as habilidades na luta contra o boss e gravar um loop é uma luta de chefe.",
+  "Your groovebox as a pixel-art RPG. The four tracks are four heroes, every lit step is an attack, the tempo sets how fast the party walks, the FX turns on the skills in the boss fight and recording a loop is a boss fight.",
+  "Tu groovebox como un RPG en pixel art. Las cuatro pistas son cuatro héroes, cada paso encendido es un ataque, el tempo define la velocidad del grupo, el FX activa las habilidades en la pelea contra el jefe y grabar un loop es una pelea de jefe.")
 k("tile1_b", "faixas", "tracks", "pistas")
-k("tile1_s", "mago, arqueiro, clérigo e guerreiro tocam as suas quatro faixas", "mage, archer, cleric and warrior play your four tracks", "mago, arquero, clérigo y guerrero tocan tus cuatro pistas")
-k("tile2_b", "tom", "key", "tono")
-k("tile2_s", "maior é floresta, menor é caverna, dórico é costa, frígio são ruínas", "major is forest, minor is cave, dorian is coast, phrygian is ruins", "mayor es bosque, menor es cueva, dórico es costa, frigio son ruinas")
+k("tile1_s", "mago, arqueiro, clérigo, guerreiro e duas classes secretas", "mage, archer, cleric, warrior and two secret classes", "mago, arquero, clérigo, guerrero y dos clases secretas")
+k("tile2_b", "alma de RPG", "RPG soul", "alma de RPG")
+k("tile2_s", "Não tenha só um sintetizador com RPG dentro: tenha um RPG novel com mundo próprio, controlado por ritmos musicais a partir de um sintetizador.", "Don't settle for a synthesizer with an RPG inside: have an RPG novel with a world of its own, controlled by musical rhythms from a synthesizer.", "No tengas solo un sintetizador con un RPG dentro: ten una novela RPG con mundo propio, controlada por ritmos musicales desde un sintetizador.")
 k("tile3_b", "fx", "fx", "fx")
-k("tile3_s", "distorção, chorus, delay e reverb, cada um com a sua cara no cenário", "distortion, chorus, delay and reverb, each with its own look in the scenery", "distorsión, chorus, delay y reverb, cada uno con su aspecto en el escenario")
+k("tile3_s", "cada efeito tem um estilo próprio: ele afeta o seu preset quando você toca uma tecla e também os efeitos de mundo no cenário e nos personagens", "each effect has its own style: it affects your preset when you play a key and also the world effects on the scenery and the characters", "cada efecto tiene un estilo propio: afecta a tu preset cuando tocas una tecla y también a los efectos de mundo en el escenario y los personajes")
 k("tile4_b", "rec", "rec", "rec")
 k("tile4_s", "um loop selvagem aparece: grave para vencer o Rei Slime", "a wild loop appears: record it to beat the King Slime", "aparece un loop salvaje: grábalo para vencer al Rey Slime")
 
@@ -110,6 +110,9 @@ k("i_direct", "Conecte o cabo USB direto no computador. Não precisa de sonda ne
 k("i_beta", "O FM1 Quest é um firmware personalizado experimental e pode ser instável. Ele não foi testado em todas as unidades. Os autores não se responsabilizam se o seu FM-1 for danificado ou se comportar mal por causa dele. Use por sua conta e risco e salve um backup antes.",
   "FM1 Quest is an experimental custom firmware and may be unstable. It has not been tried on every unit. The authors accept no responsibility if your FM-1 is damaged or misbehaves because of it. Use it at your own risk, and save a backup first.",
   "FM1 Quest es un firmware personalizado experimental y puede ser inestable. No se ha probado en todas las unidades. Los autores no se hacen responsables si tu FM-1 se daña o se comporta mal por su causa. Úsalo bajo tu propio riesgo y guarda una copia de seguridad antes.")
+k("i_tested", "Em testes de usabilidade forcei o aparelho a travar e, nessa situação, ele só reiniciou, o que dá mais segurança no processo de instalação. Mas se algo acontecer, dá pra restaurar o backup original ou instalar outro custom firmware.",
+  "In usability tests I forced the device to hang and, in that situation, it simply restarted, which makes the installation safer. But if anything happens, you can restore the original backup or install another custom firmware.",
+  "En las pruebas de usabilidad forcé el aparato a bloquearse y, en esa situación, solo se reinició, lo que da más seguridad al proceso de instalación. Pero si algo ocurre, se puede restaurar la copia original o instalar otro custom firmware.")
 k("i_editor", "Abrir o editor (backup, sons e sequências, pelo computador)", "Open the editor (back up, edit sounds and sequences from the computer)", "Abrir el editor (copia de seguridad, sonidos y secuencias, desde el ordenador)")
 k("i_source", "Código no GitHub", "Source on GitHub", "Código en GitHub")
 k("i_brick", "Se uma instalação falhar e o FM-1 não ligar mais, a recuperação precisa de um Transporter: <a href=\"https://github.com/kurogedelic/FM-1-transporter\" target=\"_blank\" rel=\"noopener\">FM-1-transporter</a>. Segure OCT− sozinho ao ligar o FM-1 para o resgate por USB.",

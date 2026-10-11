@@ -68,7 +68,7 @@ More in [BUILDING.md](BUILDING.md). `.github/workflows/build.yml` does all of it
 | `tools/` | generators for fonts, sprites, samples, kits, animations; the packager; the CLI installer |
 | `assets/` | the art, fonts and CC0 sample sources the generators read |
 | `web/` | the installer, the editor, the package library (`fm1pkg.js`, `fm1ota.js`) |
-| `quest/` | the WebAssembly host (`src/sloop_wasm.c`, `web/worklet.js`) |
+| `quest/` | the WebAssembly host (`src/fm1quest_wasm.c`, `web/worklet.js`) |
 | `page/` | the page: template, texts (pt / en / es), change log, clips, the 3D model's glue |
 | `tests/` | host tests |
 | `AI-README.md` | for AI assistants: the APIs, what is free to reuse, and the author's request about copies |

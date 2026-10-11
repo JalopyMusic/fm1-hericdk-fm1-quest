@@ -78,7 +78,7 @@ All of this is GPL-3.0 code. These parts are meant to be copied, adapted and com
 | **Sounds of the opening** | `firmware/src/splash.c`, `boot_melodies.c` test | A short melody played at power on, switchable in the menu (BOOT SOUND) | Replace the notes; keep the `boot_mute` flag |
 | **Visualizers** | `ui_quest_pages.c` (`pv_*`) | Pages that move with the real level of each track (`pv.e[i]`) | Add a function with the `ps_draw` signature to `PV_FN[]` and a name to `PV_NM[]`; read `c->k[i]` for the levels |
 | **Simple FX mechanics** | `ui_quest_pages.c` (`ps_pedals`, `ps_towers`, `ps_cathedral`) | An effect page that animates its own parameters | Same scene signature; a target value and a displayed value that walks to it (see `pt_step`) |
-| **The simulator** | `page/lab-fm1w.js`, `page/sim-src/`, `quest/src/sloop_wasm.c`, `quest/web/worklet.js` | A 3D faceplate whose glass shows the real firmware compiled to WebAssembly; keys, buttons, knobs, MIDI and the LEDs are wired to it | Copy, adapt and publish it: that part is meant to be shared. `FM1W.btn / key / knob / leds` are the four hooks |
+| **The simulator** | `page/lab-fm1w.js`, `page/sim-src/`, `quest/src/fm1quest_wasm.c`, `quest/web/worklet.js` | A 3D faceplate whose glass shows the real firmware compiled to WebAssembly; keys, buttons, knobs, MIDI and the LEDs are wired to it | Copy, adapt and publish it: that part is meant to be shared. `FM1W.btn / key / knob / leds` are the four hooks |
 | **Rhythm games** | `ui_quest_pages.c` (`gm_*`), `tools/gen_quest_games.py` | A tape of notes, a score, a grade, a card-flip cover | Songs are 4 KB slots in flash (`sng_hdr_t`); the covers are LZ4 bitmaps |
 
 ### The APIs you will see

@@ -1,5 +1,5 @@
 // FM1 Quest · the 3D faceplate drives the REAL firmware.
-// The firmware (quest/web/sloop.wasm, built from firmware/src) runs inside an AudioWorklet (worklet.js). This file puts its 240x240 framebuffer on the glass of the
+// The firmware (quest/web/fm1quest.wasm, built from firmware/src) runs inside an AudioWorklet (worklet.js). This file puts its 240x240 framebuffer on the glass of the
 // 3D model, sends it every press / key / knob turn the model receives (mouse, touch, computer keyboard, MIDI keyboard, an FM-1 on USB: they all end in the same
 // four functions of the simulator), and lights the model's LEDs from the firmware's own LED matrix. Before the first click the glass says POWER ON (a browser
 // only starts audio after a gesture).
@@ -52,7 +52,8 @@
     const rest = [1, 2, 3, 4].sort(() => Math.random() - 0.5);
     const ULTS = [0, rest[0], rest[1]];                                              // 0 = the mage; 1..4 = archer, cleric, knight, red warrior
     let pi = 0, round = 0;
-    const clip = () => { const n = PL[pi]; return n === 'ULT' ? 'ult_' + ULTS[round % ULTS.length] + '.mp4' : 'p_' + n + '.mp4'; };
+    const VQ = '__VQ__'.startsWith('__') ? '' : '__VQ__';                              // the build's content hash (page/build_page.py): the browser never shows an old preview
+    const clip = () => { const n = PL[pi]; return (n === 'ULT' ? 'ult_' + ULTS[round % ULTS.length] + '.mp4' : 'p_' + n + '.mp4') + VQ; };
     vid.src = clip(); vid.muted = vid.autoplay = vid.playsInline = true; vid.setAttribute('aria-hidden', 'true');
     vid.onended = () => {
       pi++; if (pi >= PL.length) { pi = 0; round++; }
@@ -76,7 +77,7 @@
         const base = document.currentScript ? '' : '';
         W.ctx = new AudioContext({ sampleRate: 44100, latencyHint: 'interactive' });
         await W.ctx.audioWorklet.addModule('fm1-worklet.js');
-        const [wasmBytes, flashImage] = await Promise.all([(await fetch('sloop.wasm')).arrayBuffer(), loadFlash()]);
+        const [wasmBytes, flashImage] = await Promise.all([(await fetch('fm1quest.wasm' + VQ)).arrayBuffer(), loadFlash()]);
         W.node = new AudioWorkletNode(W.ctx, 'sloop', { outputChannelCount: [2], processorOptions: { wasmBytes, flashImage } });
         W.node.port.onmessage = (ev) => {
           const m = ev.data;
