@@ -46,11 +46,17 @@
     cv.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;z-index:9999;background:#000;cursor:pointer';
     box.style.position = box.style.position || 'relative';
     const vid = document.createElement('video');                                   // the demo loop: what the firmware does today; it goes away at the first click
-    vid.src = 'demo.mp4'; vid.muted = vid.autoplay = vid.playsInline = true; vid.setAttribute('aria-hidden', 'true');
-    let part = 0, nult = 0;                                                         // the loop: the firmware today (village, map, goblin fight with ults), then one hero's ult fullscreen,
-    vid.onended = () => {                                                           // the next hero every round: elf, archer, cleric, knight, red warrior, elf...
-      if (part === 0) { vid.src = 'ult_' + (nult % 5) + '.mp4'; nult++; part = 1; } else { vid.src = 'demo.mp4'; part = 0; }
-      vid.play().catch(() => {});
+    // the preview on the glass: village, the party against the new monsters, the goblin boss with an ult in its window, ONE hero's ult fullscreen
+    // (the mage first; the other two are drawn at random, never repeated), the visualizer, the FX pages being edited; then it starts again with the same order
+    const PL = ['village', 'map', 'boss_goblin', 'ULT', 'viz_sky', 'fx_pedals', 'slicer_towers'];
+    const rest = [1, 2, 3, 4].sort(() => Math.random() - 0.5);
+    const ULTS = [0, rest[0], rest[1]];                                              // 0 = the mage; 1..4 = archer, cleric, knight, red warrior
+    let pi = 0, round = 0;
+    const clip = () => { const n = PL[pi]; return n === 'ULT' ? 'ult_' + ULTS[round % ULTS.length] + '.mp4' : 'p_' + n + '.mp4'; };
+    vid.src = clip(); vid.muted = vid.autoplay = vid.playsInline = true; vid.setAttribute('aria-hidden', 'true');
+    vid.onended = () => {
+      pi++; if (pi >= PL.length) { pi = 0; round++; }
+      vid.src = clip(); vid.play().catch(() => {});
     };
     vid.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:fill;image-rendering:pixelated;z-index:9998;background:#000';
     box.append(vid, cv); cv.style.background = 'transparent'; vid.play().catch(() => {});
