@@ -23,7 +23,7 @@ jobs:
       - run: pip install pillow numpy ziglang
       - name: JieLi toolchain
         run: sh tools/get_toolchain.sh
-      - name: JieLi AC79 SDK files (vendored in assets/jieli; build.py checks their SHA-256)
+      - name: "JieLi AC79 SDK files (vendored in assets/jieli; build.py checks their SHA-256)"
         run: |
           D=$HOME/fw-AC79_AIoT_SDK/cpu/wl82/tools
           mkdir -p $D/cfg
@@ -63,9 +63,9 @@ jobs:
         with:
           name: fm1-quest-firmware
           path: build/felucca.fwsc
-      - name: The real firmware in WebAssembly (the page's 3D model runs it)
+      - name: "The real firmware in WebAssembly (the page's 3D model runs it)"
         run: cd quest && CC=zig sh ./build.sh
-      - name: Site (the page: installer, change log and the 3D model; the editor)
+      - name: "Site (the page: installer, change log and the 3D model; the editor)"
         run: |
           VER=$(grep -o 'FELUCCA_VERSION[^"]*"[^"]*"' firmware/src/ui.c | head -1 | cut -d'"' -f2)
           python3 web/make_site.py build/felucca.fwsc "${VER:-dev}" site
