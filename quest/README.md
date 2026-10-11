@@ -4,7 +4,8 @@ The SLOOP firmware of the M-VAVE FM-1 with an RPG sidescroll interface: tracks a
 walk, the key sets the biome, effects are the weather, a recording is a boss fight (design: `design/`). **The interface replaces
 SLOOP's screens; there is no switch back.** Every musical function stays where SLOOP has it, with the same controls.
 
-* `firmware/src/ui_quest*.c` — the interface in C (the 240x240 `cv_*` canvas, integer maths): Title (`splash.c`), Party, Boss, Duel,
+* `firmware/src/ui_quest*.c` — the interface in C (the 240x240 `cv_*` canvas, integer maths): Title (`splash.c`), Party, Village (the second home: HOME tapped again on
+  the tracks page; `ui_quest_town.c`, its houses generated from the lab by `tools/gen_town.mjs`), Boss, Duel,
   Rec ready, Count-in, Dungeon, Kit, Spells, Banish, Biome, Camp, Weather, Equip, Inn. Screens SLOOP has and the design does not
   (the roll / steps / song layers, hold, ABOUT, the other pages) keep their layout in the TAVERN palette (`gfx.c`, `ui_studio.c`).
 * `tools/gen_quest_*.py` — fonts (Pixelify Sans 8 px, Jacquarda Bastarda 9 16 px), the baked sprites (`assets/quest/sprites.json`,

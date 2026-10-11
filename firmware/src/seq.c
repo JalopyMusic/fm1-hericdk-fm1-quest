@@ -778,8 +778,10 @@ static void arm_start(track_t *t)
 }
 
 static void drum_input(uint32_t lane, uint32_t lvl, uint32_t rat, int rec);
+static uint8_t game_hold;                         /* FM Hero / Piano playing: the keys make no sound of their own, the game plays the chart's note */
 static void input_on(track_t *t, uint32_t note, uint32_t vel)
 {
+    if (game_hold) return;
     if (is_drum(t)) {                             /* (a GM note on the drum track: its lane) */
         drum_input(lane_of_note(note), vel_lvl(vel), 0, 1);
         return;

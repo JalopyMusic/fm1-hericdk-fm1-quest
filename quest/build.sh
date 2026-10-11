@@ -9,16 +9,8 @@ SLOOP=${SLOOP:-$(cd .. && pwd)}
 CC=${CC:-clang}
 TARGET=wasm32
 if [ "$CC" = zig ]; then CC="python3 -m ziglang cc"; TARGET=wasm32-freestanding; fi
-if [ ! -f "$SLOOP/build/gen/felucca_tables.h" ]; then      # the firmware's generated tables, fonts, icons, samples
-    mkdir -p "$SLOOP/build/gen"
-    for g in font icons tables samples drumkits logo; do
-        out="$SLOOP/build/gen/felucca_$g.h"; [ "$g" = logo ] && out="$SLOOP/build/gen/sloop_logo.h"
-        python3 "$SLOOP/tools/gen_$g.py" "$out"
-    done
-fi
-python3 "$SLOOP/tools/gen_quest_font.py" "$SLOOP/build/gen/felucca_qfont.h"
-python3 "$SLOOP/tools/gen_quest_sprites.py" "$SLOOP/build/gen/felucca_qsprites.h"
-python3 "$SLOOP/tools/gen_quest_title.py" "$SLOOP/build/gen/felucca_qtitle.h"
+# the generated headers (fonts, icons, tables, samples, the Quest art and its LZ4 packing): the same step as the firmware build
+python3 -c "import sys; sys.path.insert(0, '$SLOOP/tools'); import build; build.generate()"
 $CC --target=$TARGET -O2 -fno-builtin -ffreestanding -nostdlib -w \
   -I "$SLOOP/build/gen" -I "$SLOOP/firmware/src" -I src \
   -Wl,--no-entry -Wl,--export-memory -Wl,-z,stack-size=1048576 -Wl,--global-base=1048576 \

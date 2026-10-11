@@ -15,6 +15,7 @@
  *   boot    emu_init (splash) then emu_start, emu_frame() ~60/s (ui loop)
  */
 #include <stdint.h>
+#define FM1_XIP(off) ((uintptr_t)(emu_flash + ((uint32_t)(off) - EMU_FLASH_BASE)))      /* the flash window the firmware reads songs and samples from: our RAM image */
 
 #define WASM_EXPORT(n) __attribute__((export_name(n), used))
 
@@ -65,6 +66,8 @@ static volatile struct {
 static uint8_t fm1_led[FM1_NCOL];
 static uint8_t fm1_led_dim[FM1_NCOL];
 static uint8_t fm1_led_bg[FM1_NCOL];
+static uint8_t fm1_led_lv[41];                 /* the brightness of each button / key LED (ui_input.c: effects, hints) */
+char _etext[1]; uint32_t _data_start[1], _data_end[1], _bss_start[1], _bss_end[1], _pool_start[1], _pool_end[1], _rt_start[1], _rt_end[1];   /* (the linker's: the ABOUT page reads them) */
 static volatile uint16_t fm1_led_bg_ns;
 
 static void fm1_input_init(void) {}
@@ -271,6 +274,8 @@ static int st_prog(uint32_t off, const void *src, uint32_t n)
 #include "upreset.c"
 #include "project.c"
 #include "splash.c"
+static int ed_smp_erase(uint32_t k, uint32_t all) { (void)k; (void)all; return 0; }      /* (editor.c is not part of the emulator) */
+static int ed_sng_erase(uint32_t sid) { (void)sid; return 0; }
 
 /* ------------------------------------------------------------- web entry --- */
 static float emu_audio_f[2u * 512u];
@@ -394,6 +399,7 @@ WASM_EXPORT("emu_fb_ptr") uint32_t emu_fb_ptr(void) { return (uint32_t)(uintptr_
 WASM_EXPORT("emu_fb_gen") uint32_t emu_fb_gen_get(void) { return emu_fb_gen; }
 WASM_EXPORT("emu_audio_ptr") uint32_t emu_audio_ptr(void) { return (uint32_t)(uintptr_t)emu_audio_f; }
 WASM_EXPORT("emu_led_ptr") uint32_t emu_led_ptr(void) { return (uint32_t)(uintptr_t)fm1_led; }
+WASM_EXPORT("emu_led_lv_ptr") uint32_t emu_led_lv_ptr(void) { return (uint32_t)(uintptr_t)fm1_led_lv; }
 WASM_EXPORT("emu_led_dim_ptr") uint32_t emu_led_dim_ptr(void) { return (uint32_t)(uintptr_t)fm1_led_dim; }
 WASM_EXPORT("emu_flash_ptr") uint32_t emu_flash_ptr(void) { return (uint32_t)(uintptr_t)emu_flash; }
 WASM_EXPORT("emu_flash_size") uint32_t emu_flash_size(void) { return EMU_FLASH_SIZE; }

@@ -13,6 +13,8 @@ for f in src["frames"]:
     assert len(raw) == n
     rows.append((f["ox"], f["oy"], f["w"], f["h"], len(data)))
     names.append(f["name"].upper())
+    if f["name"].split("_")[0] in ("mage", "archer", "cleric", "warrior") and f["name"].split("_")[1] != "__none":
+        continue                                          # the heroes are drawn by code (firmware/src/ui_quest_fig.c): the box stays, the pixels go
     px = [0 if v == 255 else v for v in raw] + [0]
     data += [(px[i] << 4) | px[i + 1] for i in range(0, n, 2)]                   # 4 bits per pixel, high nibble first
     mask = [1 if v != 255 else 0 for v in raw] + [0] * (-n % 8)

@@ -17,4 +17,6 @@ PY="${PYTHON:-python3}"
 if [ "$(uname -s)" != Linux ] || [ "$(uname -m)" != x86_64 ]; then
     docker info >/dev/null 2>&1 || { echo "build.sh: Docker is not running"; exit 1; }
 fi
-exec "$PY" tools/build.py "$@"
+"$PY" tools/build.py "$@" || exit $?
+[ -f tools/hub_build.py ] && "$PY" tools/hub_build.py >/dev/null 2>&1   # the hub shows the live free space
+exit 0

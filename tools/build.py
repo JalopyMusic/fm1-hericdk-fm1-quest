@@ -92,15 +92,18 @@ def generate():
     """generated headers (fonts, icons, tables, samples)"""
     GEN.mkdir(parents=True, exist_ok=True)
     tools = SRC / "tools"
-    cmds = [[tools / "gen_font.py", GEN / "felucca_font.h"],
-            [tools / "gen_icons.py", GEN / "felucca_icons.h"],
+    cmds = [[tools / "gen_icons.py", GEN / "felucca_icons.h"],
             [tools / "gen_tables.py", GEN / "felucca_tables.h"],
             [tools / "gen_samples.py", GEN / "felucca_samples.h"],
             [tools / "gen_drumkits.py", GEN / "felucca_drumkits.h"],
             [tools / "gen_logo.py", GEN / "sloop_logo.h"],
             [tools / "gen_quest_font.py", GEN / "felucca_qfont.h"],          # FM1 Quest
             [tools / "gen_quest_sprites.py", GEN / "felucca_qsprites.h"],
-            [tools / "gen_quest_title.py", GEN / "felucca_qtitle.h"]]
+            [tools / "gen_quest_title.py", GEN / "felucca_qtitle.h"],
+            [tools / "gen_quest_rec.py", GEN / "felucca_qrec.h"],
+            [tools / "gen_quest_games.py", GEN / "felucca_qgames.h"],
+            [tools / "gen_quest_ult.py", GEN / "felucca_qult.h"],
+            [tools / "gen_quest_goblin.py", GEN / "felucca_qgob.h"]]
     procs = [subprocess.Popen([sys.executable, *map(str, c)], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                               text=True) for c in cmds]
     failed = []
@@ -110,6 +113,8 @@ def generate():
             failed.append(c[0].name)
     if failed:
         raise SystemExit(f"build: {', '.join(failed)} failed")
+    import pack_gfx                                                  # lossless LZ4 of the fonts and sprites (not the logo)
+    pack_gfx.main(GEN)
 
 
 # ---- update loader
@@ -181,6 +186,7 @@ def build_app():
         v = os.environ.get(flag)    # unset: the default in firmware/src/felucca.c
         if v in ("0", "1"):
             flags.append(f"-D{flag}={v}")
+    flags += os.environ.get("FELUCCA_EXTRA_CFLAGS", "").split()      # e.g. -fno-inline: one symbol per function, to measure where the bytes are
     flags.append(f'-DFELUCCA_ID="{PRODUCT}"')
     if VERSION:
         flags.append(f'-DFELUCCA_VERSION="{VERSION}"')

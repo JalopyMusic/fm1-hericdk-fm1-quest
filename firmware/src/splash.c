@@ -41,8 +41,8 @@ static void sloop_splash(void)
         for (y = y0; y < y0 + 120u; y++) {
             uint32_t f = y < 91u ? 115u + (256u - 115u) * y / 91u : y > 149u ? 256u - 192u * (y - 149u) / 91u : 256u;
             for (x = 0; x < 240u; x++) {
-                uint32_t i = (y / 2u) * QTITLE_BGW + x / 2u, v = (QTITLE_BG[i / 2u] >> ((i & 1u) ? 0 : 4)) & 15u;
-                cv_pset((int32_t)x, (int32_t)y, f == 256u ? QPAL[v] : q_dim565(QPAL[v], f));
+                uint32_t i = (y / 2u) * QTITLE_BGW + x / 2u, v = (QTITLE_BG[i / 2u] >> ((i & 1u) ? 0u : 4u)) & 15u;
+                { uint16_t pc = q_filter ? q_flt_c(QPAL_BASE[v], q_filter) : QPAL_BASE[v]; cv_pset((int32_t)x, (int32_t)y, f == 256u ? pc : q_dim565(pc, f)); }
             }
         }
         for (ly = 0; ly < QTITLE_LOGO_H; ly++)                          /* the outline first, then the cream letters */
@@ -59,7 +59,7 @@ static void sloop_splash(void)
         q_panel(72, 192, 96, 22);
         q_tri(82, 200, Q_TEXT);
         q_text(94, 197, "press play", Q_TEXT);
-        q_outline_text(120 - text_w(&FONT_Q, "based on Sloop") / 2, 221, "based on Sloop", Q_TEXT);
+        q_outline_text(120 - text_w(&FONT_P, "v" FELUCCA_VERSION) / 2, 221, "v" FELUCCA_VERSION, Q_TEXT);
         cv_oy = 0;
         cv_blit(0, y0);
     }

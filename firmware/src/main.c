@@ -117,9 +117,63 @@ static void felucca_init(void)
     song.master_q12 = 2048;
     autosave_resume();                        /* the project as it was left (project.c) */
     song.g[G_SYNC] = (int16_t)lights_sync;    /* a setting of the FM-1 (panel.c) */
+    q_set_var(2, q_var[2]), q_set_var(3, q_var[3]);
+    q_filter_set(q_filter);   /* the Party's class choices (settings) */
     layers_init();                            /* the panel's layer buttons for the keys (ui_layers.c) */
     go_home();
     ui.force = 1;
+}
+
+/* power-on lights: a wave of lit keys runs up the keyboard (9 steps, 3 keys each; each light fades in and drifts out), then EVERY key fades in, shines
+ * and fades out once: that blink is the end of the animation. Brightness is the HAL's soft level (fm1_led_lv, 0..16). */
+static uint32_t boot_lv(int32_t dt, int32_t up, int32_t hold, int32_t down)      /* an envelope, ms -> 0..16 (squared: the eye is logarithmic) */
+{
+    int32_t b;
+    if (dt < 0) return 0;
+    b = dt < up ? dt * 1000 / up : dt < up + hold ? 1000 : 1000 - (dt - up - hold) * 1000 / down;
+    if (b < 0) b = 0;
+    return (uint32_t)(b * b / 62500);
+}
+/* the power-on sound: FLUTE DUST (GRAIN) plays a five-note phrase while the keys light. The master level is held up for it (the knob takes over again in the
+ * main loop), and the first track is put back exactly as it was. */
+static track_t boot_trk;
+static const struct { uint16_t on, off; uint8_t note; } BOOT_MEL[5] = {{0, 515, 69}, {750, 1265, 72}, {1500, 2015, 76}, {2250, 2578, 74}, {2625, 2953, 72}};   /* A4 C5 E5 D5 C5 */
+static void boot_keys(void)
+{
+    int32_t T, i;
+    int16_t gs[G_COUNT];
+    boot_trk = trk[0];
+    for (i = 0; i < (int32_t)G_COUNT; i++) {                /* the sound as it was auditioned: the global effects at their defaults, 80 BPM */
+        gs[i] = song.g[i];
+        if (i != G_SLOT && i != G_DRCH && i != G_SYNC) song.g[i] = GP[i].def;
+    }
+    song.g[G_BPM] = 80;
+    fm1_irq_off();
+    set_engine_of(&trk[0], 8u);                         /* GRAIN */
+    apply_preset_to(&trk[0], 2u);                       /* FLUTE DUST */
+    trk[0].engine = trk[0].eng_req;
+    fm1_irq_on();
+    song.master_q12 = 410;                               /* 10 %: not loud */
+    trk[0].p[P_LEVEL] = TP[P_LEVEL].def, trk[0].p[P_PAN] = 0, trk[0].p[P_MUTE] = 0;   /* the preset as the test heard it */
+    for (T = 0; T < 3300; T += 10) {
+        for (i = 0; i < 5; i++) {
+            if (boot_mute) break;                      /* (menu BOOT SOUND off: the lights only) */
+            if (T == (int32_t)BOOT_MEL[i].on) trk_note_on(&trk[0], BOOT_MEL[i].note, 100);
+            if (T == (int32_t)BOOT_MEL[i].off) trk_note_off(&trk[0], BOOT_MEL[i].note);
+        }
+        for (i = 0; i + 14 < (int32_t)FM1_NKEY; i++)
+            fm1_led_lv[14 + i] = (uint8_t)(T < 2430 ? boot_lv(T - (i / 3) * 270, 90, 0, 420) : boot_lv(T - 2430, 160, 120, 600));
+        for (i = 0; i < 14; i++)
+            fm1_led_lv[i] = (uint8_t)(T < 2430 ? 0u : boot_lv(T - 2430, 160, 120, 600));
+        fm1_wdt_feed();
+        fm1_delay_ms(10);
+    }
+    for (i = 0; i < (int32_t)FM1_NKEY; i++)
+        fm1_led_lv[i] = 0;
+    fm1_irq_off();
+    trk[0] = boot_trk;                                  /* the track as it was (its voices are idle again) */
+    for (i = 0; i < (int32_t)G_COUNT; i++) song.g[i] = gs[i];
+    fm1_irq_on();
 }
 
 static void fm1_main(void)
@@ -160,11 +214,7 @@ static void fm1_main(void)
     fm1_guard_lock_top();
     fm1_irq_enable_all();
     fm1_delay_ms(30);
-    if ((fm1_in.buttons & 3u) == 3u) {
-        panel_setup();                        /* OCT- + OCT+ held at power-on */
-        settings_save();
-    }
-    fm1_delay_ms(900);                                  /* (the logo stays a moment) */
+    boot_keys();                                        /* (the logo stays while the keys play their wave and blink) */
     lcd_fill(0, 0, 240, 240, C_BLACK);
 
     healthy_since = fm1_ms;

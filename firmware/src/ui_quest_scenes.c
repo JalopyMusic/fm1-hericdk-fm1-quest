@@ -4,7 +4,7 @@
 #define QPC(x) ((x) * 256 / 100)
 
 /* hero pose by attack phase p (Q8 beats), a hero of the party drawn at (x, y): the same rules as the world scene */
-static uint32_t q_pose(uint32_t t, int32_t p)
+static UI_NOINLINE uint32_t q_pose(uint32_t t, int32_t p)
 {
     switch (t) {
     case 0: return (p != QNONE && p > -QPC(40) && p < QPC(60)) ? QS_MAGE_CAST_0 : QS_MAGE_IDLE_0;
@@ -15,7 +15,7 @@ static uint32_t q_pose(uint32_t t, int32_t p)
 }
 
 /* ---- BOSS (README): one hero per beat of the bar: warrior dash + impact frame, mage 3 meteors, archer volley, boss slam + barrier ---- */
-static void q_boss_draw(int solid)      /* the King Slime and his minion, as the whole (solid -1) or as a silhouette (0) / flash (7) */
+static UI_NOINLINE void q_boss_draw(int solid)      /* the King Slime and his minion, as the whole (solid -1) or as a silhouette (0) / flash (7) */
 {
     int32_t G = 70, bq = q_beat_q8(), bi = (bq >> 8) & 3, bp = bq & 255, kl = 0, ksq = 0, l2, s2;
     if (bi == 3 && bp < QPC(30)) kl = 16 * qsin(bp * 16 / QPC(30)) / 127;
@@ -25,7 +25,7 @@ static void q_boss_draw(int solid)      /* the King Slime and his minion, as the
     q_hop(bq + 128, 4, &l2, &s2);
     q_slime(224, G, 14, 10, 11, 3, s2 == 0 ? -31 : s2 == 2 ? 56 : 0, l2, solid == 7, solid == 0 ? 0 : -1, 1, 0, 0, 0);
 }
-static void q_scene_boss(void)
+static UI_NOINLINE void q_scene_boss(void)
 {
     int32_t G = 70, bq = q_beat_q8(), bi = (bq >> 8) & 3, bp = bq & 255, wx = Q_PX[3], wy = 0, front = 172 - 40, bcx = 172, bcy = G - 18, flash = 0;
     int32_t wp = QNONE, pm = QNONE, pa = QNONE, pc = QNONE, k;
@@ -94,71 +94,11 @@ static void q_scene_boss(void)
     }
 }
 
-/* ---- DUEL (README): one diagonal camera, ground y = 102 - x * 0.2; the hero against a shadow rival who counters off the beat ---- */
-static int32_t q_gy(int32_t x) { return 102 - x / 5; }
-static int32_t q_aph_str(const char *pat, int32_t len, int32_t sf_q8)       /* as q_aph_pat for a duel's 0/1 pattern (bytes) */
-{
-    int32_t s = sf_q8 >> 8, k;
-    for (k = 1; k <= 2; k++) { int32_t n = s + k; if (pat[((n % len) + len) % len] && n * 256 - sf_q8 < 512) return (sf_q8 - n * 256) / 4; }
-    for (k = 0; k < 6; k++) { int32_t h = s - k; if (pat[((h % len) + len) % len]) { int32_t p = (sf_q8 - h * 256) / 4; return p < 307 ? p : QNONE; } }
-    return QNONE;
-}
-static void q_scene_duel(uint32_t trk_i)
-{
-    int32_t bq = q_beat_q8(), sf = bq * 4, len = (int32_t)clamp(trk[trk_i].p[P_SLEN], 1, NSTEP), i, x, tms = (int32_t)(fm1_ms & 0xFFFFFF);
-    char hp_[NSTEP], rp_[NSTEP];
-    int32_t ph, pr, hx = 38, rx = 164, home = 38, rhome = 164, hy, ry;
-    int32_t sx = 0, sy = 0;
-    for (i = 0; i < len; i++) { hp_[i] = trk_step_on(&trk[trk_i], (uint32_t)i); rp_[i] = (i % 16) == 12; }
-    ph = song.playing ? q_aph_str(hp_, len, sf) : QNONE;
-    pr = song.playing ? q_aph_str(rp_, len, sf) : QNONE;
-    if (q_in(ph, 5, 16) || q_in(pr, 5, 16)) { sx = (int32_t)(qhash((uint32_t)(tms / 33)) % 5u) - 2; sy = (int32_t)(qhash((uint32_t)(tms / 33) + 3u) % 5u) - 2; }
-    cv_begin(QW, 110, QP(5));
-    {   /* sky, dashes in the air, the floor, specks on it */
-        static const uint8_t SK[3] = {1, 2, 13};
-        for (i = 0; i < 3; i++) q_rp(0, i * 77 / 3, QW, 77 / 3 + 2, SK[i]);
-        for (i = 0; i < 26; i++) {
-            int32_t len2 = 20 + (int32_t)(qhash((uint32_t)i + 3u) % 50u), off = 14 + (int32_t)(qhash((uint32_t)i) % 80u), spd = 120 + (int32_t)(qhash((uint32_t)i) % 90u);
-            int32_t x0 = (((int32_t)(qhash((uint32_t)i + 9u) % 400u) - tms * spd / 1000) % 400 + 400) % 400 - 80, k;
-            for (k = 0; k < len2; k++) if (x0 + k >= 0 && x0 + k < QW) q_rp(x0 + k + sx, q_gy(x0 + k) - off + sy, 1, 1, i % 3 ? 6u : 10u);
-        }
-        for (x = 0; x < QW; x++) { int32_t y = q_gy(x); q_rp(x, y, 1, 110 - y + 6, 5); q_rp(x, y, 1, 1, 10); }
-        for (i = 0; i < 24; i++) {
-            int32_t x0 = (((int32_t)(qhash((uint32_t)i) % 300u) - tms * 50 / 1000) % 300 + 300) % 300 - 30, off = 4 + (int32_t)(qhash((uint32_t)i + 1u) % 22u), k;
-            for (k = 0; k < 6; k++) if (x0 + k >= 0 && x0 + k < QW) q_rp(x0 + k, q_gy(x0 + k) + off, 1, 1, 6);
-        }
-    }
-    if (ph != QNONE) {
-        if (ph < 0) hx = home - 3;
-        else if (ph < QPC(15)) hx = home + (rhome - 34 - home) * ph / QPC(15);
-        else if (ph < QPC(60)) hx = rhome - 34;
-        else if (ph < 256) hx = rhome - 34 + (home - (rhome - 34)) * (ph - QPC(60)) / QPC(40);
-    }
-    if (q_in(ph, 12, 60)) rx = rhome + 10 * q_min(256, (ph - QPC(12)) * 256 / QPC(10)) / 256;
-    if (pr != QNONE) {
-        if (pr < 0) rx = rhome + 3;
-        else if (pr < QPC(15)) rx = rhome + (home + 34 - rhome) * pr / QPC(15);
-        else if (pr < QPC(60)) rx = home + 34;
-        else if (pr < 256) rx = home + 34 + (rhome - (home + 34)) * (pr - QPC(60)) / QPC(40);
-    }
-    if (q_in(pr, 12, 60)) hx = home - 10 * q_min(256, (pr - QPC(12)) * 256 / QPC(10)) / 256;
-    hy = q_gy(hx + 16) - 48, ry = q_gy(rx + 16) - 48;
-    for (i = 0; i < 12; i++) { q_rp(hx + 4 + i * 2, q_gy(hx + 16) + 1, 1, 1, 0); q_rp(rx + 4 + i * 2, q_gy(rx + 16) + 1, 1, 1, 0); }
-    if (q_in(ph, 0, 15)) for (i = 1; i <= 2; i++) q_spr(QS_WARRIOR_STRIKE_0, hx - i * 12, q_gy(hx - i * 12 + 16) - 48, 2, 0, 13);
-    if (q_in(pr, 0, 15)) for (i = 1; i <= 2; i++) q_spr(QS_RIVAL_STRIKE, rx + i * 12, q_gy(rx + i * 12 + 16) - 48, 2, 1, 2);
-    {
-        uint32_t rpose = (pr == QNONE || pr >= QPC(60)) ? QS_RIVAL_IDLE : pr < 0 ? QS_RIVAL_ANTIC : pr < QPC(25) ? QS_RIVAL_STRIKE : QS_RIVAL_FOLLOW;
-        q_spr(rpose, rx, ry, 2, 1, q_in(ph, 10, 22) ? 7 : -1);
-        q_spr(q_pose(3, ph), hx, hy, 2, 0, q_in(pr, 10, 22) ? 7 : -1);
-        if (ph != QNONE && ph >= 0 && ph < QPC(60)) q_swoosh(hx + 20, hy + 24, 16, (ph < QPC(25) ? 4 : 2) * 2, ph < QPC(25) ? ph * 256 / QPC(25) : 256, 7, 12, 0);
-        if (pr != QNONE && pr >= 0 && pr < QPC(60)) q_swoosh(rx + 12, ry + 24, 16, (pr < QPC(25) ? 4 : 2) * 2, pr < QPC(25) ? pr * 256 / QPC(25) : 256, 14, 13, 1);
-    }
-    if (q_in(ph, 10, 35)) { static const uint8_t CA[3] = {7, 10, 12}; q_burst(rx + 10, ry + 22, (ph - QPC(10)) * 256 / QPC(25) * 6 / 10, CA, 3); }
-    if (q_in(pr, 10, 35)) { static const uint8_t CB[2] = {7, 14}; q_burst(hx + 22, hy + 22, (pr - QPC(10)) * 256 / QPC(25) * 6 / 10, CB, 2); }
-}
+/* (the DUEL scene -- the soloed track against a shadow rival -- is gone with solo) */
+static UI_NOINLINE int32_t q_gy(int32_t x) { return 102 - x / 5; }
 
 /* ---- BANISH (README): the warrior throws a bomb in an arc, it explodes and dissolves the slimes, which re-form 8 beats later ---- */
-static void q_scene_erase(void)
+static UI_NOINLINE void q_scene_erase(void)
 {
     int32_t G = 70, bq = q_beat_q8(), cyc = bq & 2047, cc = cyc * 100 / 256, k = bq >> 11, m, n;       /* cc: beat of the 8-beat cycle, x100 */
     int32_t wph = QNONE, bx0 = Q_PX[3] + 16, by0 = G - 16, tx = 173, ty = G - 6;
@@ -192,7 +132,7 @@ static void q_scene_erase(void)
 }
 
 /* ---- EQUIP (README): the hero of the selected track on a pedestal with a glow, 3x; particles rise ---- */
-static void q_scene_equip(int32_t bx, int32_t by, uint32_t t)           /* a 72 x 96 strip blitted at (bx, by) */
+static UI_NOINLINE void q_scene_equip(int32_t bx, int32_t by, uint32_t t)           /* a 72 x 96 strip blitted at (bx, by) */
 {
     int32_t x, y, dy, k, tms = (int32_t)(fm1_ms & 0xFFFFFF);
     uint32_t pose = Q_HERO[t];

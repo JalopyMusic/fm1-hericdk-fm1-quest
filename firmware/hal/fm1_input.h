@@ -101,6 +101,10 @@ static uint8_t fm1_led[FM1_NCOL];
 #endif
 #define FM1__NS_T(ns) (((uint32_t)(ns) * FM1_TICKS_PER_US + 500u) / 1000u)   /* ns -> TIMER4 ticks */
 static uint8_t fm1_led_dim[FM1_NCOL];   /* same layout as fm1_led: the glow */
+/* soft brightness: fm1_led_lv[key id] = 0..16 sixteenths of full, spread over 16 frames (~57 Hz at the lowest, every other frame at half), so a light can
+ * fade in and out (the power-on animation, a key let go). fm1__frame turns the levels into fm1_led_pw, the extra lit mask the column ticks add. */
+static uint8_t fm1_led_lv[FM1_NKEY];
+static uint8_t fm1_led_pw[FM1_NCOL];
 static uint8_t fm1_led_bg[FM1_NCOL];    /* same layout: the backlight (labels readable in the dark) */
 static volatile uint16_t fm1_led_bg_ns; /* the backlight pulse a frame (ns), 0 = off (menu LIGHTS) */
 
@@ -276,6 +280,27 @@ static void fm1__frame(void)
             *sub = 0;
         }
     }
+    {   /* soft brightness: which levelled LEDs are lit in this frame */
+        static uint8_t pos[FM1_NKEY], ready;
+        uint32_t id, f = fm1_in.frames & 15u;
+        if (!ready) {
+            uint32_t pc, r;
+            for (id = 0; id < FM1_NKEY; id++)
+                pos[id] = 0xFFu;
+            for (pc = 0; pc < FM1_NCOL; pc++)
+                for (r = 1; r < 5u; r++)
+                    if (FM1_KEYMAP[r][pc] >= 0)
+                        pos[FM1_KEYMAP[r][pc]] = (uint8_t)(pc << 3 | r);
+            ready = 1;
+        }
+        for (e = 0; e < FM1_NCOL; e++)
+            fm1_led_pw[e] = 0;
+        for (id = 0; id < FM1_NKEY; id++) {
+            uint32_t lv = fm1_led_lv[id];
+            if (lv && pos[id] != 0xFFu && (((f + 1u) * lv) >> 4) != ((f * lv) >> 4))
+                fm1_led_pw[pos[id] >> 3] |= (uint8_t)(1u << (pos[id] & 7u));
+        }
+    }
     fm1_in.frames++;
 }
 
@@ -287,7 +312,7 @@ static void fm1_input_tick(void)
 {
     uint32_t p = fm1__tick_col, n = p + 1u == FM1_NCOL ? 0u : p + 1u, i;
     uint32_t w = 0xFFFFu ^ (1u << n) ^ (n < 2u ? 1u << (11u + n) : 0u);
-    uint32_t lit = fm1_led[p], a = fm1_led_dim[p] & ~lit, b = fm1_led_bg[p] & ~lit & ~a;
+    uint32_t lit = fm1_led[p] | fm1_led_pw[p], a = fm1_led_dim[p] & ~lit, b = fm1_led_bg[p] & ~lit & ~a;
     uint32_t ta = a ? FM1__NS_T(FM1_GLOW_NS) : 0u, tb = b ? FM1__NS_T(fm1_led_bg_ns) : 0u;
     uint32_t tmax = ta > tb ? ta : tb;
     fm1__led_lines(0);
@@ -309,7 +334,7 @@ static void fm1_input_tick(void)
     } else {
         fm1__sr_word(w);
     }
-    fm1__led_lines(fm1_led[n]);
+    fm1__led_lines(fm1_led[n] | fm1_led_pw[n]);
     fm1__tick_col = (uint8_t)n;
     fm1__keys(p);                                  /* its keys now: no wait for the frame's end */
     if (n == 0u)

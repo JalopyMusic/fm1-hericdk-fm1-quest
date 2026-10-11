@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta name="color-scheme" content="dark">
+<script>window.__midiAcc = []; (function () { if (!navigator.requestMIDIAccess) return; const r = navigator.requestMIDIAccess.bind(navigator); navigator.requestMIDIAccess = async function (o) { const a = await r(o); window.__midiAcc.push(a); return a; }; })();</script>
+<script>window.FM1_EMBED = true; document.documentElement.classList.add("embed");</script>
+<link rel="stylesheet" href="embed.css">
+<script>window.__errs = []; addEventListener("error", e => /ResizeObserver/.test(e.message || "") || window.__errs.push((e.message || "") + " @ " + String(e.filename || "").split("/").pop() + ":" + e.lineno)); addEventListener("unhandledrejection", e => window.__errs.push("promise: " + (e.reason && e.reason.message || e.reason)));</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FM1 Quest — Screen Lab</title>
+<link rel="stylesheet" href="lcd.css">
+<link rel="stylesheet" href="lab.css">
+<link rel="stylesheet" href="lab-sim.css">
+<link rel="stylesheet" href="lab-editor.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jacquard+12&family=Jacquard+24&family=Silkscreen&family=Press+Start+2P&family=Tiny5&family=DotGothic16&family=MedievalSharp&family=Uncial+Antiqua&family=Pirata+One&family=Metamorphous&family=IM+Fell+English+SC&family=Almendra&family=Cinzel+Decorative&family=VT323&display=swap">
+</head>
+<body>
+<div id="bar-ctl">
+  <h1>FM1 QUEST · LAB <small class="ver">v0.2</small></h1>
+  <button id="go-telas" class="hublink" style="margin-left:10px;padding:5px 10px;border:1px solid #3a3644;border-radius:8px;background:none;color:#f0c860;cursor:pointer;font:600 13px system-ui,sans-serif">Telas do firmware</button>
+  <a href="../../site-v02/index.html" target="_blank" class="hublink" style="margin-left:10px;padding:5px 10px;border:1px solid #3a3644;border-radius:8px;color:#f0c860;text-decoration:none;font:600 13px system-ui,sans-serif">Ir para o site →</a>
+  <a href="../../fm1-hub/index.html" class="hublink" style="margin-left:10px;padding:5px 10px;border:1px solid #3a3644;border-radius:8px;color:#f0c860;text-decoration:none;font:600 13px system-ui,sans-serif">Ir para o Hub →</a>
+  <div class="g">
+    <button id="c-play">▶ play</button>
+    <button id="c-sound" title="liga/desliga o áudio (começa desligado; o relógio continua)">som</button>
+    <button id="c-loop" class="on" title="o HP do boss drena ao longo do loop e recomeça">loop boss</button>
+  </div>
+  <div class="sep"></div>
+  <div class="g"><button id="c-usb" title="liga o FM-1 por USB MIDI">FM-1 USB</button><small id="o-usb" style="color:var(--dim)"></small><button id="c-dbg" title="mostra/esconde as opções de teste (bpm, fx, fps, orçamento…)">⚙ debug</button></div>
+  <div id="dbg" hidden>
+  <div class="sep"></div>
+  <div class="g"><label>bpm</label><input id="c-bpm" type="range" min="60" max="200" value="130"><output id="o-bpm">130</output></div>
+  <div class="g"><label>swing</label><input id="c-swing" type="range" min="50" max="75" value="50"><output id="o-swing">50</output></div>
+  <div class="g"><label>escala</label><select id="c-scale"><option value="0">maj · floresta</option><option value="1">min · caverna</option><option value="2">dor · costa</option><option value="3">phr · ruínas</option></select>
+    <select id="c-root"></select></div>
+  <div class="sep"></div>
+  <div class="g"><label>faixa</label><span id="c-trk"></span><button id="c-mute">mute</button><button id="c-solo">solo</button></div>
+  <div class="sep"></div>
+  <div class="g"><label>fx</label>
+    <span>dst <input class="fx" data-fx="dst" type="range" min="0" max="1" step=".01" style="width:60px"></span>
+    <span>cho <input class="fx" data-fx="cho" type="range" min="0" max="1" step=".01" style="width:60px"></span>
+    <span>dly <input class="fx" data-fx="dly" type="range" min="0" max="1" step=".01" style="width:60px"></span>
+    <span>rev <input class="fx" data-fx="rev" type="range" min="0" max="1" step=".01" style="width:60px"></span></div>
+  <div class="sep"></div>
+  <div class="g" hidden><label>boss hp</label><input id="c-hp" type="range" min="0" max="1" step=".01" value="1"><output id="o-hp">100</output></div>
+  <div class="g"><label>fps</label><input id="c-fps" type="range" min="4" max="60" step="1" value="16"><output id="o-fps">16</output><small id="o-spi" style="color:var(--dim)"></small></div>
+  <div class="g"><label>cenário</label><select id="c-bg"><option value="scale">bioma da escala</option><option value="cycle">ciclo dia/noite</option></select><input id="c-day" type="range" min="0" max="1" step=".01" value=".3" title="posição na música (só no ciclo)" style="width:70px"></div>
+  <div class="g" id="filt"><label>mostrar</label><label class="rd"><input type="radio" name="cat" value="all" checked> todos</label><label class="rd"><input type="radio" name="cat" value="use"> usar</label><label class="rd"><input type="radio" name="cat" value="opt"> opcionais</label><label class="rd"><input type="radio" name="cat" value="drop"> dispensar</label></div>
+  <div class="g"><label>idioma</label><select id="c-lang"><option>EN</option><option>PT</option><option>ES</option><option>JA</option></select></div>
+  <div class="g"><label hidden>zoom</label><button id="z-" hidden>−</button><output id="o-z" hidden>2×</output><button id="z+" hidden>+</button>
+    <button id="c-scan">scanlines</button><button id="c-mono">mono</button><button id="c-freeze">congelar cenas</button><label class="rd" title="recolore todos os ambientes com poucas cores e dither (estilo dos mapas de referência)"><input type="checkbox" id="c-style" checked> paleta limitada nos ambientes</label>
+    <button id="c-budget" title="simulação de SPI, CPU, flash e RAM">orçamento <b id="o-bud"></b></button></div>
+  </div>
+</div>
+<div id="budget" hidden></div>
+
+<main>
+  <h2>TF · Telas · histórico <span class="pill ok">v0.1 · v0.2 · hoje</span></h2>
+  <p class="sub">Todas as telas num só lugar, em colunas: como era no SLOOP original (v0.1), o que pensamos para a v0.2 (os protótipos do lab) e como está hoje no firmware.</p>
+  <div id="telas"></div>
+  <h2>S · Simulador <span class="pill ok">painel do FM-1</span></h2>
+  <p class="sub">O painel do FM-1 na tela: os botões, knobs e teclas funcionam com mouse, teclado do computador ou o FM-1 ligado por USB. Toque num botão para abrir a tela dele; segure um botão e aperte uma tecla para a camada (como no aparelho).</p>
+  <div id="sim"></div>
+  <h2>ST · Story <span class="pill ok">abertura e storyboard</span></h2>
+  <p class="sub">A abertura em cenas: taverna → quadro de missões → saída → vila → colina → caminhada em grupo → luta. Os personagens são bonecos de referência (rig) para você desenhar por cima. Alterne entre o esboço (wireframe) e a cena melhorada, edite no painel lateral, propague mudanças, desfaça e salve.</p>
+  <div id="story"></div>
+  <h2>SC · Cenas <span class="pill ok">cenários com parallax</span></h2>
+  <p class="sub">Os cenários da abertura, um por vez, com controles: hora do dia, multidão, velocidade. Camadas de profundidade em cores diferentes no esboço; formas simples no cenário.</p>
+  <div id="scenes"></div>
+  <h2>FXG · Efeitos <span class="pill ok">LEDs · transições · golpes</span></h2>
+  <p class="sub">Catálogo de efeitos: LEDs (repouso, ao tocar, ligados à tela), transições de tela e efeitos de golpe/magia (gerados por código ou desenhados).</p>
+  <div id="fxg"></div>
+  <h2>0 · Personagens <span class="pill ok">visualizador</span></h2>
+  <p class="sub">Todos os personagens, animações e estados rodando no tamanho real do visor do FM-1 (240×240). Para desenhar ou mexer em um personagem, use a aba Editor.</p>
+  <h2 style="display:none">0b</h2><div class="tiles" id="g-heroes" style="display:none"></div>
+  <div id="chars"></div>
+  <h2>0b · Inimigos <span class="pill">provisórios</span></h2>
+  <p class="sub">Estes são os inimigos de teste; os definitivos virão dos sprites que você vai enviar.</p>
+  <div class="tiles" id="g-enemies"></div>
+  
+
+  <h2>ED · Editor <span class="pill ok">pixel art · rig · interface</span></h2>
+  <p class="sub">Editor de pixels com a paleta de 16 cores do aparelho: sprites 15×15 (luta) e 48×48 (cenas), partes do corpo para o rig, e elementos de interface na densidade de pixels do FM-1. Desfazer/refazer, onion skin, folhas de PNG.</p>
+  <div id="editor"></div>
+  <h2>FE · Ferramentas <span class="pill ok">vídeo → dither · fontes · formatos</span></h2>
+  <p class="sub">Conversor de vídeo para pixel art com dither (faixas, recorte, cortes de tempo, efeitos prontos), edição quadro a quadro e estimativa de tamanho no aparelho.</p>
+  <div id="tools"></div>
+  <h2>FE2 · Imagem → dither <span class="pill ok">envie, ajuste, retoque, baixe</span></h2>
+  <div id="imgdither"></div>
+  <h2>FE3 · Telas das ferramentas <span class="pill ok">como estão hoje</span></h2>
+  <p class="sub">As telas do aparelho ligadas às ferramentas (importer, seleção de sons, luzes das teclas, menu), capturadas do firmware.</p>
+  <div id="toolshots"></div>
+  <h2>00 · Fontes dos títulos <span class="pill">teste</span></h2>
+  <p class="sub">Clique numa fonte para trocar todos os títulos (barras de cada tela, nomes grandes, rótulos) de uma vez. As fontes vêm do Google Fonts (precisa de internet); a atual é a "Jacquarda Bastarda 9".</p>
+  <div id="fonts"></div>
+  <h2>1 · Telas do FM1 Quest <span class="pill ok">simuladas ao vivo</span></h2>
+  <p class="sub">As 15 telas do modo Quest renderizadas com o mesmo relógio e o mesmo estado (barra de cima). Clique nos pads/linhas dentro de cada tela, role o mouse sobre os knobs, ou use os mini-controles abaixo de cada uma. É uma maquete JS — o aparelho real é a verdade (C em <code>firmware/src/ui_quest_*.c</code>).</p>
+  <div class="tiles" id="g-quest"></div>
+
+  <h2>1b · Telas novas: banco de sons (SoundFont / SNES) <span class="pill hook">protótipo só nesta página</span></h2>
+  <p class="sub">Duas telas novas para escolher um instrumento de um banco e encaixar o sample nos 3 slots USR do aparelho (80 KiB cada). O banco e os tamanhos são de demonstração; a conta de tamanho usa 4 bits por amostra (formato ADPCM do firmware).</p>
+  <div class="tiles" id="g-new"></div>
+
+  <h2>2 · Outras telas do FM-1 <span class="pill">capturas reais do firmware (WASM)</span></h2>
+  <p class="sub">Telas que existem no aparelho e não foram redesenhadas como Quest (voz, envelope, LFO, FX, escala, song, layers…). São PNGs 240×240 do emulador do firmware, estáticos.</p>
+  <div class="tiles" id="g-shots"></div>
+  <div id="imp"></div>
+
+  <div id="sug"></div>
+
+  <h2>4 · Dados musicais que dá para extrair e como virar RPG</h2>
+  <p class="legend2"><span class="pill ok">já lido</span> o Quest já usa · <span class="pill">firmware</span> existe no firmware, falta ligar · <span class="pill hook">hook novo</span> precisa de código novo em audio/seq (a confirmar na leitura do fonte).</p>
+  <table class="data" id="tbl"></table>
+</main>
+
+<script src="js/scene.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/screens.js"></script>
+<script src="lab-style.js"></script>
+<script src="lab-gfx.js"></script>
+<script src="lab-s1.js"></script>
+<script src="lab-s2.js"></script>
+<script src="lab-s3.js"></script>
+<script src="lab-s4.js"></script>
+<script src="lab-s5.js"></script>
+<script src="lab-s6.js"></script>
+<script src="lab-s7.js"></script>
+<script src="lab-s8.js"></script>
+<script src="lab-s9.js"></script>
+<script src="lab-viz.js"></script>
+<script src="lab-trackfx.js"></script>
+<script src="lab-plan.js"></script>
+<script src="lab.js"></script>
+<script src="lab-budget.js"></script>
+<script src="lab-sim.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="lab-3d.js"></script>
+<script src="lab-keys.js"></script>
+<script src="lab-led.js"></script>
+<script src="lab-midi.js"></script>
+<script src="lab-game.js"></script>
+<script src="lab-store.js"></script>
+<script src="lab-rig.js"></script>
+<script src="lab-armas.js"></script>
+<script src="lab-titulos.js"></script>
+<script src="lab-pixhero.js"></script>
+<script src="lab-editor.js"></script>
+<script src="lab-wyvern.js"></script>
+<script src="lab-scenes.js"></script>
+<script src="lab-opening.js"></script>
+<script src="lab-trans.js"></script>
+<script src="lab-tavern.js"></script>
+<script src="lab-tavern2.js"></script>
+<script src="lab-story.js"></script>
+<script src="lab-storymode.js"></script>
+<script src="lab-vila.js"></script>
+<script src="lab-items.js"></script>
+<script src="lab-portraits.js"></script>
+<script src="lab-chars.js"></script>
+<script src="lab-fxgal.js"></script>
+<script src="lab-telas.js"></script>
+<script src="lab-imgdither.js"></script>
+<script src="lab-ult.js"></script>
+<script src="lab-video.js?v=4"></script>
+<script src="lab-fm1w.js"></script>
+<script src="embed.js"></script>
+</body>
+</html>

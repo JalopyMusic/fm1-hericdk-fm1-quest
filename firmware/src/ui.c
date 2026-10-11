@@ -3,11 +3,10 @@
 /* Felucca user interface. Four columns map to KNOB 1..4. Rendering is lazy:
  * every element remembers what it last drew and is redrawn only on change. */
 #ifndef FELUCCA_VERSION
-#define FELUCCA_VERSION "SLOOP 2.3"  /* the beat machine firmware for the FM-1 (based on Felucca) */
+#define FELUCCA_VERSION "0.2"  /* FM1 Quest v0.2: groups 1-3, games (FM Hero, Piano Hero), no weather, pixel heroes in Party, the village (second home) */
 #endif
 static void project_save(uint32_t slot);
 static void arrangement_save(void);
-static void panel_setup(void);
 static void project_load(uint32_t slot);
 static int project_used(uint32_t slot);
 static int up_used(uint32_t k);              /* user presets: upreset.c */
@@ -18,7 +17,7 @@ static uint32_t up_rank(uint32_t slot);
 static void up_name(uint32_t k, char *b);
 static void up_slot_label(char *b, uint32_t k);
 static void up_ui(uint32_t op, uint32_t k);
-static uint32_t user_of(const track_t *t)    /* user preset slot its sound came from, UP_SLOTS = none */
+static UI_NOINLINE uint32_t user_of(const track_t *t)    /* user preset slot its sound came from, UP_SLOTS = none */
 {
     return t->user && up_used(t->user - 1u) ? t->user - 1u : UP_SLOTS;
 }
@@ -83,13 +82,13 @@ static struct {
     uint8_t graph_top;           /* the graph strip's top G_OY rows hold something */
 } ui;
 
-static const page_t *cur_page(void) { return &PAGES[ui.page]; }
+static UI_NOINLINE const page_t *cur_page(void) { return &PAGES[ui.page]; }
 static int32_t accel(uint32_t role, int32_t s, int32_t range);   /* ui_input.c */
 static void layer_screen_draw(void);                            /* ui_layers.c */
 static void hold_screen_draw(void);
 static uint8_t layer_shown;
 
-static uint32_t page_first(uint32_t fam)
+static UI_NOINLINE uint32_t page_first(uint32_t fam)
 {
     uint32_t i;
     for (i = 0; i < NPAGES; i++)
@@ -99,7 +98,7 @@ static uint32_t page_first(uint32_t fam)
 }
 
 /* transient message in the top bar: a + b */
-static void ui_say(const char *a, const char *b)
+static UI_NOINLINE void ui_say(const char *a, const char *b)
 {
     uint32_t n;
     str_cpy(ui.msg, a, sizeof ui.msg);
@@ -108,9 +107,9 @@ static void ui_say(const char *a, const char *b)
     ui.msg_t = 40;
 }
 
-static void ui_message(const char *s) { ui_say(s, ""); }
+static UI_NOINLINE void ui_message(const char *s) { ui_say(s, ""); }
 
-static void page_entered(void)
+static UI_NOINLINE void page_entered(void)
 {
     const page_t *pg = cur_page();
     song.seq_mode = !ui.home && pg->fam == FAM_SEQ;
@@ -119,21 +118,21 @@ static void page_entered(void)
     ui.force = 1;
 }
 
-static int step_on(const step_t *st) { return st->time == ST_NOTE && st->n; }
+static UI_NOINLINE int step_on(const step_t *st) { return st->time == ST_NOTE && st->n; }
 /* step i of track t has something to play (synth: notes, drums: a lane) */
-static int trk_step_on(const track_t *t, uint32_t i)
+static UI_NOINLINE int trk_step_on(const track_t *t, uint32_t i)
 {
     return is_drum(t) ? dstep_mask(&t->dstep[i % NSTEP]) != 0u : step_on(&t->step[i % NSTEP]);
 }
 
-static void step_clear(step_t *st)
+static UI_NOINLINE void step_clear(step_t *st)
 {
     memset(st, 0, sizeof *st);
     st->time = ST_REST;
 }
 
 /* undo / redo (EDIT + OCT- / OCT+): the marked pattern and the one now swap places */
-static int undo_swap(int redo)
+static UI_NOINLINE int undo_swap(int redo)
 {
     track_t *t;
     int16_t len;
@@ -160,7 +159,7 @@ static int undo_swap(int redo)
 }
 
 /* SEQ cursor: wraps inside the pattern length, the bank follows, a step entry ends */
-static void cursor_set(int32_t c)
+static UI_NOINLINE void cursor_set(int32_t c)
 {
     int32_t len = TSEL->p[P_SLEN] > 0 ? TSEL->p[P_SLEN] : 1;
     ui.cursor = (uint8_t)((c % len + len) % len);
@@ -168,19 +167,19 @@ static void cursor_set(int32_t c)
     ui.entry_open = 0;
 }
 
-static void cursor_fix(void)                           /* LEN got shorter: onto the last step */
+static UI_NOINLINE void cursor_fix(void)                           /* LEN got shorter: onto the last step */
 {
     if (ui.cursor >= (uint32_t)TSEL->p[P_SLEN])
         cursor_set(TSEL->p[P_SLEN] - 1);
 }
 
-static void note_name(char *b, uint32_t n)
+static UI_NOINLINE void note_name(char *b, uint32_t n)
 {
     str_cpy(b, N_NOTE[n % 12u], 4);
     fmt_int(b + str_len(b), (int32_t)(n / 12u) - 1);
 }
 
-static void open_family(uint32_t fam)
+static UI_NOINLINE void open_family(uint32_t fam)
 {
     if (!ui.home && cur_page()->fam == fam) {          /* same button again: next page */
         uint32_t i = ui.page + 1u;
@@ -196,7 +195,7 @@ static void open_family(uint32_t fam)
     page_entered();
 }
 
-static void go_home(void)
+static UI_NOINLINE void go_home(void)
 {
 #if FELUCCA_ARRANGER
     ui.home = 0;
@@ -216,24 +215,24 @@ static void go_home(void)
 
 /* the parts' sounds at power-on (engine, preset): bass, pad, lead */
 static const uint8_t TRK_DEF[NPART][2] = {{0, 0}, {1, 0}, {4, 5}};   /* ANALOG 808 BOOM, DIGITAL RHODES, SAMPLE LOFI FLUTE */
-static uint32_t trk_def_engine(uint32_t i) { return i < NPART ? TRK_DEF[i][0] : 0u; }
+static UI_NOINLINE uint32_t trk_def_engine(uint32_t i) { return i < NPART ? TRK_DEF[i][0] : 0u; }
 
-static int seq_is_empty(const track_t *t) { return track_empty(t); }
+static UI_NOINLINE int seq_is_empty(const track_t *t) { return track_empty(t); }
 
-static void track_defaults_steps(track_t *t) { steps_clear(t); }
+static UI_NOINLINE void track_defaults_steps(track_t *t) { steps_clear(t); }
 
 /* what loading a sound (factory or user preset) leaves alone: the mix (LEVEL, PAN, MUTE:
  * the TRACKS faders), the pattern parameters (LEN, DIV, SWING, GATE) and the key the part plays
  * in (ROOT, SCALE, QNT, CHORD: the song's; SCL + key sets the root of every part). The SLICER is
  * part of the sound: a factory preset turns it OFF (its defaults), a user preset brings its own */
-static int param_kept(uint32_t i)
+static UI_NOINLINE int param_kept(uint32_t i)
 {
     return i == P_LEVEL || i == P_PAN || i == P_MUTE || (i >= P_SLEN && i <= P_SGATE) ||
            (i >= P_ROOT && i <= P_QUANT) || i == P_CHORD;
 }
 
 /* preset pi of the engine the track asked for: the whole sound (not the pattern parameters) */
-static void apply_preset_to(track_t *t, uint32_t pi)
+static UI_NOINLINE void apply_preset_to(track_t *t, uint32_t pi)
 {
     const engine_t *e = ENGINES[t->eng_req % NENGINES];
     uint32_t i;
@@ -270,9 +269,44 @@ static void apply_preset_to(track_t *t, uint32_t pi)
     }
 }
 
+/* FM1 Quest: a hero's effects are the four sends against the sound's own preset values. They cost SP (it drains while the loop plays),
+ * the cleric (track 3) heals it; OCT- + OCT+ held resets the selected hero's effects and the cleric throws a white beam on it. */
+static uint8_t q_sp[4] = {100, 100, 100, 100};
+static uint32_t fxb_t0, fxb_trk;
+static UI_NOINLINE int32_t fx_base(const track_t *t, uint32_t i)
+{
+    static const uint8_t FX_DEF2[4] = {0, 24, 28, 36};
+    const engine_t *e = ENGINES[t->eng_req % NENGINES];
+    if (user_of(t) < UP_SLOTS || !e->npresets)
+        return FX_DEF2[i];
+    return e->presets[t->preset % e->npresets].fx[i] ? e->presets[t->preset % e->npresets].fx[i] - 1 : FX_DEF2[i];
+}
+static UI_NOINLINE uint32_t fx_active(const track_t *t)
+{
+    uint32_t i;
+    if (is_drum(t))
+        return 0u;
+    for (i = 0; i < 4u; i++)
+        if (t->p[P_DIST + i] != fx_base(t, i))
+            return 1u;
+    return 0u;
+}
+static UI_NOINLINE void fx_reset(uint32_t hero)
+{
+    track_t *t = &trk[hero % NTRK];
+    uint32_t i;
+    if (is_drum(t))
+        return;
+    for (i = 0; i < 4u; i++)
+        t->p[P_DIST + i] = (int16_t)fx_base(t, i);
+    q_sp[hero % NTRK] = 100;
+    fxb_trk = hero % NTRK;
+    fxb_t0 = fm1_ms | 1u;
+}
+
 /* the engine's defaults and its first preset. With the audio IRQ off: the ISR sees the old engine with
  * its values or the new one with its own (voice.c engine_block), never one with the other's */
-static void set_engine_of(track_t *t, uint32_t ei)
+static UI_NOINLINE void set_engine_of(track_t *t, uint32_t ei)
 {
     const engine_t *e = ENGINES[ei % NENGINES];
     uint32_t i;
@@ -286,10 +320,10 @@ static void set_engine_of(track_t *t, uint32_t ei)
     fm1_irq_on();
 }
 
-static void apply_preset(uint32_t pi) { apply_preset_to(TSEL, pi); }
-static void set_engine(uint32_t ei) { set_engine_of(TSEL, ei); }
+static UI_NOINLINE void apply_preset(uint32_t pi) { apply_preset_to(TSEL, pi); }
+static UI_NOINLINE void set_engine(uint32_t ei) { set_engine_of(TSEL, ei); }
 
-static void track_defaults(track_t *t)
+static UI_NOINLINE void track_defaults(track_t *t)
 {
     uint32_t i;
     for (i = 0; i < P_E0; i++)
@@ -298,7 +332,7 @@ static void track_defaults(track_t *t)
 }
 
 /* switch engine (its defaults + first preset) and say so */
-static void select_engine(uint32_t e)
+static UI_NOINLINE void select_engine(uint32_t e)
 {
     if (is_drum(TSEL))
         return;
@@ -312,32 +346,32 @@ static void select_engine(uint32_t e)
  * engine's preset table may change order; tests/ui_pages_test.c checks every preset is here once */
 enum { BK_BASS, BK_KEYS, BK_ORGAN, BK_PAD, BK_LEAD, BK_PLUCK, BK_STAB, BK_FX };
 static const char *const BANK_KIND[] = {"BASS", "KEYS", "ORGN", "PAD", "LEAD", "PLCK", "STAB", "FX"};
-static const struct { uint8_t kind, e; const char *name; } BANK[] = {
-    {BK_BASS, 0, "808 BOOM"}, {BK_BASS, 0, "808 DIRTY"}, {BK_BASS, 0, "808 SLIDE"}, {BK_BASS, 0, "SUB BASS"},
-    {BK_BASS, 0, "PLUGG BASS"}, {BK_BASS, 0, "REESE"}, {BK_BASS, 0, "WOBBLE"}, {BK_BASS, 0, "ACID 303"},
-    {BK_BASS, 1, "FM BASS"}, {BK_BASS, 2, "CZ BASS"}, {BK_BASS, 6, "FAT BASS"}, {BK_BASS, 0, "FUNK BASS"},
-    {BK_BASS, 5, "WOW BASS"}, {BK_BASS, 3, "GB BASS"}, {BK_BASS, 4, "UP BASS"}, {BK_BASS, 4, "DEEP BASS"},
-    {BK_KEYS, 1, "RHODES"}, {BK_KEYS, 1, "DX RHODES"}, {BK_KEYS, 1, "WURLI"}, {BK_KEYS, 1, "M1 PIANO"},
-    {BK_KEYS, 1, "AFRO KEYS"}, {BK_KEYS, 4, "GRAND PNO"}, {BK_KEYS, 4, "DUSTY PNO"}, {BK_KEYS, 4, "LOFI KEYS"}, {BK_KEYS, 2, "SOFT KEYS"},
-    {BK_KEYS, 1, "CLAV"},
-    {BK_ORGAN, 7, "SOUL ORGAN"}, {BK_ORGAN, 7, "GOSPEL"}, {BK_ORGAN, 7, "JAZZ ORGAN"}, {BK_ORGAN, 7, "DIRTY B3"},
-    {BK_ORGAN, 7, "HOUSE ORGN"},
-    {BK_PAD, 0, "WARM PAD"}, {BK_PAD, 6, "SAW PAD"}, {BK_PAD, 1, "GLASS PAD"}, {BK_PAD, 0, "DARK STR"},
-    {BK_PAD, 2, "CZ STRING"}, {BK_PAD, 0, "ATMOS PAD"}, {BK_PAD, 8, "LOFI CLOUD"}, {BK_PAD, 8, "VIBE HAZE"},
-    {BK_PAD, 5, "CHOIR AAH"}, {BK_PAD, 5, "SOUL OOH"},
-    {BK_LEAD, 0, "SUPERSAW"}, {BK_LEAD, 0, "G-FUNK LD"}, {BK_LEAD, 6, "SYNC LEAD"}, {BK_LEAD, 6, "HOOVER"},
-    {BK_LEAD, 5, "TALKBOX"}, {BK_LEAD, 3, "GAME LEAD"}, {BK_LEAD, 4, "LOFI FLUTE"}, {BK_LEAD, 8, "FLUTE DUST"},
-    {BK_PLUCK, 0, "TRAP PLUCK"}, {BK_PLUCK, 2, "RESO PLUCK"}, {BK_PLUCK, 1, "PLUGG BELL"}, {BK_PLUCK, 1, "TRAP BELL"},
-    {BK_PLUCK, 1, "MUSIC BOX"}, {BK_PLUCK, 1, "KALIMBA"}, {BK_PLUCK, 1, "MARIMBA"}, {BK_PLUCK, 4, "VIBES"},
-    {BK_PLUCK, 3, "8BIT ARP"},
-    {BK_STAB, 6, "MIN STAB"}, {BK_STAB, 6, "MIN7 STAB"}, {BK_STAB, 6, "RAVE STAB"}, {BK_STAB, 6, "DUB CHORD"},
-    {BK_STAB, 0, "SYN BRASS"}, {BK_STAB, 2, "CZ BRASS"}, {BK_STAB, 4, "HORN STAB"}, {BK_STAB, 4, "STRING STB"},
-    {BK_FX, 4, "SCRATCH"}, {BK_FX, 4, "GM KIT"},
+static const struct { uint8_t kind, e; const char *name; } BANK[] = {   /* by category (the bank menu order), alphabetical inside it */
+    {BK_BASS, 0, "808 BOOM"}, {BK_BASS, 0, "808 DIRTY"}, {BK_BASS, 0, "808 SLIDE"}, {BK_BASS, 0, "ACID 303"},
+    {BK_BASS, 2, "CZ BASS"}, {BK_BASS, 4, "DEEP BASS"}, {BK_BASS, 6, "FAT BASS"}, {BK_BASS, 1, "FM BASS"},
+    {BK_BASS, 0, "FUNK BASS"}, {BK_BASS, 3, "GB BASS"}, {BK_BASS, 0, "PLUGG BASS"}, {BK_BASS, 0, "REESE"},
+    {BK_BASS, 0, "SUB BASS"}, {BK_BASS, 4, "UP BASS"}, {BK_BASS, 0, "WOBBLE"}, {BK_BASS, 5, "WOW BASS"},
+    {BK_KEYS, 1, "AFRO KEYS"}, {BK_KEYS, 1, "CLAV"}, {BK_KEYS, 4, "DUSTY PNO"}, {BK_KEYS, 1, "DX RHODES"},
+    {BK_KEYS, 4, "GRAND PNO"}, {BK_KEYS, 4, "LOFI KEYS"}, {BK_KEYS, 1, "M1 PIANO"}, {BK_KEYS, 1, "RHODES"}, {BK_KEYS, 4, "SANFONA"},
+    {BK_KEYS, 2, "SOFT KEYS"}, {BK_KEYS, 1, "WURLI"},
+    {BK_ORGAN, 7, "DIRTY B3"}, {BK_ORGAN, 7, "GOSPEL"}, {BK_ORGAN, 7, "HOUSE ORGN"}, {BK_ORGAN, 7, "JAZZ ORGAN"},
+    {BK_ORGAN, 7, "SOUL ORGAN"},
+    {BK_PAD, 0, "ATMOS PAD"}, {BK_PAD, 5, "CHOIR AAH"}, {BK_PAD, 2, "CZ STRING"}, {BK_PAD, 0, "DARK STR"},
+    {BK_PAD, 1, "GLASS PAD"}, {BK_PAD, 8, "LOFI CLOUD"}, {BK_PAD, 6, "SAW PAD"}, {BK_PAD, 5, "SOUL OOH"},
+    {BK_PAD, 8, "VIBE HAZE"}, {BK_PAD, 0, "WARM PAD"},
+    {BK_LEAD, 8, "FLUTE DUST"}, {BK_LEAD, 0, "G-FUNK LD"}, {BK_LEAD, 3, "GAME LEAD"}, {BK_LEAD, 6, "HOOVER"},
+    {BK_LEAD, 4, "LOFI FLUTE"}, {BK_LEAD, 0, "SUPERSAW"}, {BK_LEAD, 6, "SYNC LEAD"}, {BK_LEAD, 5, "TALKBOX"},
+    {BK_PLUCK, 3, "8BIT ARP"}, {BK_PLUCK, 4, "AGOGO BELL"}, {BK_PLUCK, 4, "BERIMBAU"}, {BK_PLUCK, 4, "CAVAQUINHO"}, {BK_PLUCK, 1, "KALIMBA"}, {BK_PLUCK, 1, "MARIMBA"}, {BK_PLUCK, 1, "MUSIC BOX"},
+    {BK_PLUCK, 1, "PLUGG BELL"}, {BK_PLUCK, 2, "RESO PLUCK"}, {BK_PLUCK, 1, "TRAP BELL"}, {BK_PLUCK, 0, "TRAP PLUCK"},
+    {BK_PLUCK, 4, "VIBES"},
+    {BK_STAB, 2, "CZ BRASS"}, {BK_STAB, 6, "DUB CHORD"}, {BK_STAB, 4, "HORN STAB"}, {BK_STAB, 6, "MIN STAB"},
+    {BK_STAB, 6, "MIN7 STAB"}, {BK_STAB, 6, "RAVE STAB"}, {BK_STAB, 0, "SYN BRASS"},
+    {BK_FX, 4, "GM KIT"},
 };
 #define NBANK (sizeof BANK / sizeof BANK[0])
 static uint8_t bank_pi[NBANK];                       /* the preset index of each entry in its engine */
 static uint8_t bank_ready;
-static void bank_resolve(void)
+static UI_NOINLINE void bank_resolve(void)
 {
     uint32_t i, k;
     for (i = 0; i < NBANK; i++) {
@@ -349,7 +383,7 @@ static void bank_resolve(void)
     }
     bank_ready = 1;
 }
-static uint32_t preset_pos(uint32_t *total)          /* list index of the selected track's preset */
+static UI_NOINLINE uint32_t preset_pos(uint32_t *total)          /* list index of the selected track's preset */
 {
     uint32_t i, cur = 0;
     if (!bank_ready)
@@ -364,7 +398,7 @@ static uint32_t preset_pos(uint32_t *total)          /* list index of the select
 }
 
 /* list index n (< total) -> engine, *k its preset; NENGINES = user preset, *k its slot */
-static uint32_t preset_at(uint32_t n, uint32_t *k)
+static UI_NOINLINE uint32_t preset_at(uint32_t n, uint32_t *k)
 {
     if (!bank_ready)
         bank_resolve();
@@ -375,9 +409,9 @@ static uint32_t preset_at(uint32_t n, uint32_t *k)
     *k = bank_pi[n] == 0xFF ? 0u : bank_pi[n];
     return BANK[n].e;
 }
-static const char *preset_kind(uint32_t n) { return n < NBANK ? BANK_KIND[BANK[n].kind] : "USER"; }
+static UI_NOINLINE const char *preset_kind(uint32_t n) { return n < NBANK ? BANK_KIND[BANK[n].kind] : "USER"; }
 
-static void preset_go(uint32_t n)                    /* load list index n into the selected track */
+static UI_NOINLINE void preset_go(uint32_t n)                    /* load list index n into the selected track */
 {
     uint32_t k, e = preset_at(n, &k);
     if (is_drum(TSEL))
@@ -394,7 +428,7 @@ static void preset_go(uint32_t n)                    /* load list index n into t
 
 /* HOME: what KNOB k edits: the engine's four main parameters; on the drum track
  * LEVEL and REV (GLO > DRUMS), PAN and LEN */
-static const param_desc_t *home_param(uint32_t k, int16_t **vp)
+static UI_NOINLINE const param_desc_t *home_param(uint32_t k, int16_t **vp)
 {
     static const uint8_t DRUM_HOME[4][2] = {{1, G_DRLVL}, {1, G_DRREV}, {0, P_PAN}, {0, P_SLEN}};
     uint32_t id;
@@ -413,7 +447,13 @@ static const param_desc_t *home_param(uint32_t k, int16_t **vp)
 }
 
 /* select track i (KNOB 1 on TRACKS, the editor): its sound, pages and pattern from now on */
-static void track_select(uint32_t i)
+static UI_NOINLINE uint32_t track_next(int32_t dir)       /* the ALGORITHM knob walks the heroes in the order they are listed (the drum track, the fighter, first), without wrapping */
+{
+    int32_t pos = ((int32_t)song.sel + 1) & 3;                /* 0 = the drum track, 1..3 the three parts */
+    pos = clamp(pos + (dir > 0 ? 1 : -1), 0, 3);
+    return (uint32_t)(pos + 3) & 3u;
+}
+static UI_NOINLINE void track_select(uint32_t i)
 {
     if (i >= NTRK || i == song.sel)
         return;

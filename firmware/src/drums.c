@@ -58,6 +58,18 @@ static const char *const LANE_NAME[DRUM_LANES] = {
 static const char *const LANE_SHORT[DRUM_LANES] = {           /* 5 characters: tiles, dials */
     "kick", "kick2", "snare", "clap", "hat", "open", "pedal", "rim",
     "snr 2", "tom l", "tom h", "crash", "ride", "shake", "conga", "bell"};
+/* the Brazilian kits name their sounds by the instrument (the funk takes of the carioca kit end in F); other kits use LANE_SHORT */
+static const char *const BR_PAD[2][DRUM_LANES] = {
+    {"bumbo F", "surdo F", "caixa F", "palma F", "hat F", "hatab F", "pedal", "madeira", "tamb. F", "surdo 2", "repiq F", "ganza", "prato F", "reco", "cuica", "agogo"},
+    {"zabumba", "surdo F", "triang.", "triang3", "berimb.", "berim 2", "pedal", "madeira", "triang2", "berim 3", "sanfona", "ganza", "atabaq.", "reco", "cavaq.", "agogo"}};
+static const char *lane_label(uint32_t i)
+{
+    const char *k = DRUM_KIT_NAMES[drum_kit()];
+    i &= 15u;
+    if (str_eq(k, "BRASIL")) return BR_PAD[0][i];
+    if (str_eq(k, "BRASIL 2")) return BR_PAD[1][i];
+    return LANE_SHORT[i];
+}
 /* a GM note (MIDI in, old projects) -> its lane: the nearest sound of the 16 (35..81; below: kick, above: shaker) */
 static const uint8_t LANE_OF_GM[81 - 35 + 1] = {
     /* 35 */ 1, 0, 7, 2, 3, 8, 9, 4, 9, 6,
@@ -117,12 +129,12 @@ static uint32_t vel_lvl(uint32_t vel)
     return vel < 56u ? LV_GHOST : vel < 88u ? LV_SOFT : vel < 116u ? LV_NORM : LV_HARD;
 }
 
-static void drum_on(uint32_t note, uint32_t vel)
+static void drum_on_k(uint32_t kit, uint32_t note, uint32_t vel)           /* a hit of a given kit (the drum track's, or a hero's percussion sound) */
 {
     int32_t si = drum_set();
     const smp_set_t *set;
     voice_t *v = &drums.v[0];
-    uint32_t i, zi = 0xFFFFu, kit = drum_kit();
+    uint32_t i, zi = 0xFFFFu;
     if (note != 76u && note != 77u)                 /* the pads and key LEDs (not the click's wood block) */
         drums.hits |= (uint16_t)(1u << lane_of_note(note));
     if (note == 35u || note == 36u)
@@ -158,6 +170,14 @@ static void drum_on(uint32_t note, uint32_t vel)
     if (si < 0)
         return;
     set = &SMP_SETS[si];
+    {   /* the GM notes whose zones were dropped (tools/gen_samples.py GM_KIT) play their neighbour */
+        static const uint8_t FB[11][2] = {{40, 38}, {44, 42}, {41, 43}, {45, 43}, {50, 48}, {52, 49}, {55, 49}, {57, 49}, {53, 51}, {59, 51}, {82, 70}};
+        for (i = 0; i < 11u; i++)
+            if (note == FB[i][0]) {
+                note = FB[i][1];
+                break;
+            }
+    }
     for (i = 0; i < set->nz; i++)
         if (note >= SMP_ZONES[set->z0 + i].lo && note <= SMP_ZONES[set->z0 + i].hi)
             zi = set->z0 + i;
@@ -199,6 +219,7 @@ static void drum_on(uint32_t note, uint32_t vel)
         if (shift) v->s[5] = (int32_t)((pow2_q16((int32_t)note * 16 + shift * 16 - SMP_ZONES[zi].root16) >> 8) * (SMP_ZONES[zi].rate >> 8));
     }
 }
+static void drum_on(uint32_t note, uint32_t vel) { drum_on_k(drum_kit(), note, vel); }
 
 /* adds the drums into the dry mix and the reverb send; mono != 0: into mono instead, before the
  * pan and the send (the SLICER, slicer.c slicer_drums, does those after it) */

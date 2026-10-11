@@ -20,8 +20,7 @@ from PIL import Image, ImageDraw, ImageFont
 FONTS = Path(__file__).resolve().parents[1] / "assets" / "fonts"
 # (name, file, px, scale, pixel, first, last): pixel fonts are rendered without
 # anti-aliasing at their design size and enlarged by an integer factor
-SIZES = [("S", "ter-u16n.bdf", 16, 1, True, 32, 126),   # ASCII (FM1 Quest: flash space; the umlaut of the credits is written ue)
-         ("L", "ter-u16n.bdf", 16, 2, True, 32, 95)]   # values / titles: digits, signs, capitals
+SIZES = []                                            # (FM1 Quest: the stock Terminus fonts are gone; FONT_S and FONT_L are Pixelify Sans 14 px, tools/gen_quest_font.py)
 PAD = 2
 
 

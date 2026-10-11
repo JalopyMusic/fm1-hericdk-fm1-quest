@@ -87,7 +87,7 @@ int main(void)
     nor[st_sector(OBJ_PROJECT0 + 2, 0) + 8] ^= 0x01;    /* both headers broken */
     nor[st_sector(OBJ_PROJECT0 + 2, 1) + 8] ^= 0x01;
     bad += check("both headers broken -> nothing", st_load(OBJ_PROJECT0 + 2, got, sizeof got) < 0);
-    {   /* every copy of every object in the Felucca regions, off the sample slots (0xA0000..0xDBFFF) and
+    {   /* every copy of every object in the Felucca regions, off the sample slots and songs (0xA0000..0xDBFFF) and
          * the update staging (0xE0000..), and no two sectors shared */
         uint32_t o, c, o2, c2, inside = 1, apart = 1;
         for (o = 0; o < OBJ_COUNT; o++)

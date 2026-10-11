@@ -336,7 +336,8 @@ const CMD = { INFO: 1, GET: 2, SET: 3, DUMP: 4, DESC: 5, STEP_GET: 6, STEP_SET: 
   TRACK: 27, TRACK_MIX: 28, TRACK_DUMP: 29, TRACK_STEP: 30,
   TRACK_PARAM: 31, TRACK_CHANGED: 32,
   DRUM_STEP: 33,
-  BK_LIST: 34, BK_GET: 35, BK_PUT: 36 };              /* v6: backup / restore */
+  BK_LIST: 34, BK_GET: 35, BK_PUT: 36,                /* v6: backup / restore */
+  SNG_BEGIN: 37, SNG_WRITE: 38, SNG_END: 39, SNG_ERASE: 40, SNG_INFO: 41 };   /* v7: songs of Piano Hero / FM Hero */
 /* frames the device sends on its own (while WATCH is on); never replies */
 const PUSH = new Set([CMD.CHANGED, CMD.RELOAD, CMD.STEP_CHANGED, CMD.TRACK_CHANGED]);
 /* user preset bank: name 1..12 printable ASCII, a 16-step pattern of (note, flags 1 acc 2 slide 4 tie) */
@@ -435,6 +436,16 @@ const parse = {
     const r = new Reader(a);
     const o = { nslots: r.b(), slotKiB: r.b(), slots: [] };
     for (let i = 0; i < o.nslots; i++) o.slots.push({ zones: r.b(), name: r.s(), kib: r.b() });
+    return o;
+  },
+  [CMD.SNG_BEGIN](a) { const r = new Reader(a); return { sid: r.b(), rc: r.b() }; },
+  [CMD.SNG_WRITE](a) { const r = new Reader(a); return { sid: r.b(), offset: r.b() | (r.b() << 7) | (r.b() << 14), rc: r.b() }; },
+  [CMD.SNG_END](a) { return parse[CMD.SNG_BEGIN](a); },
+  [CMD.SNG_ERASE](a) { return parse[CMD.SNG_BEGIN](a); },
+  [CMD.SNG_INFO](a) {
+    const r = new Reader(a);
+    const o = { n: r.b(), per: r.b(), bytes: r.v(), songs: [] };
+    for (let i = 0; i < o.n; i++) o.songs.push({ notes: r.v(), name: r.s(), bpm: r.v() });
     return o;
   },
   [CMD.UP_LIST](a) {
@@ -542,6 +553,11 @@ const req = {
   smpEnd: (s, hdr) => [CMD.SMP_END, [s & 0x7F, ...pack7(hdr)]],
   smpErase: (s) => [CMD.SMP_ERASE, [s & 0x7F]],
   smpInfo: () => [CMD.SMP_INFO, []],
+  sngBegin: (s) => [CMD.SNG_BEGIN, [s & 0x7F]],
+  sngWrite: (s, off, bytes) => [CMD.SNG_WRITE, [s & 0x7F, off & 0x7F, (off >> 7) & 0x7F, (off >> 14) & 0x7F, ...pack7(bytes)]],
+  sngEnd: (s, hdr) => [CMD.SNG_END, [s & 0x7F, ...pack7(hdr)]],
+  sngErase: (s) => [CMD.SNG_ERASE, [s & 0x7F]],
+  sngInfo: () => [CMD.SNG_INFO, []],
   upList: (start, count) => [CMD.UP_LIST, [start & 0x7F, Math.max(1, Math.min(UP.LIST_MAX, count | 0))]],
   upGet: (s) => [CMD.UP_GET, [s & 0x7F]],
   /* patch: {engine, name, p: P_COUNT values, pattern: 16 x [note, flags]} */
@@ -574,7 +590,9 @@ function replyMatches(cmd, args, a) {
   switch (cmd) {
     case CMD.GET: case CMD.SET: case CMD.DESC: return a[0] === args[0] && a[1] === args[1];
     case CMD.STEP_GET: case CMD.STEP_SET: case CMD.NAMES:
-    case CMD.SMP_BEGIN: case CMD.SMP_END: case CMD.SMP_ERASE: return a[0] === args[0];
+    case CMD.SMP_BEGIN: case CMD.SMP_END: case CMD.SMP_ERASE:
+    case CMD.SNG_BEGIN: case CMD.SNG_END: case CMD.SNG_ERASE: return a[0] === args[0];
+    case CMD.SNG_WRITE: return a[0] === args[0] && a[1] === args[1] && a[2] === args[2] && a[3] === args[3];
     case CMD.SMP_WRITE: return a[0] === args[0] && a[1] === args[1] && a[2] === args[2] && a[3] === args[3];
     case CMD.PROJECT: return a[0] === args[0] && a[1] === args[1];
     case CMD.UP_LIST: case CMD.UP_GET: case CMD.UP_PUT: case CMD.UP_STORE: case CMD.UP_LOAD: case CMD.UP_ERASE:
@@ -726,7 +744,7 @@ function fmtValue(d, v) {
 /* ---------------------------------------------------------- user samples --- */
 /* A port of tools/sampleio.py (read_any_wav, resample, to_int16, ima_encode, user_slot),
    byte for byte: web/test_web.mjs compares them. */
-const SMP = { SLOT_SIZE: 0x14000, DATA_OFF: 512, RATE: 22050, HDR_LEN: 32 + 16 * 28, MAX_ZONES: 16 };
+const SMP = { SLOT_SIZE: 0x10000, DATA_OFF: 512, RATE: 21600, HDR_LEN: 32 + 16 * 28, MAX_ZONES: 16 };
 SMP.MAX_DATA = SMP.SLOT_SIZE - SMP.DATA_OFF;
 
 /* groups of up to 7 bytes, each preceded by their top bits */
@@ -1420,7 +1438,7 @@ function makeMockDevice(opt = {}) {
     E("ROLL", ["1/8", "1/16", "1/32", "32T", "1/64"], 1), E("NEW", NGO, 0),
   ];
   /* the drum track's P_E0: its kit (drums.c DRUM_KIT_NAMES; 5 = 808, the power-on kit) */
-  const KIT = E("KIT", ["ACOUSTIC", "DEEP", "TIGHT", "BRIGHT", "DUST", "808", "909", "606", "80S", "VINTAGE", "TRAP", "DRILL", "BOOMBAP", "LO-FI", "PHONK", "HOUSE", "D.HOUSE", "TECHNO", "MINIMAL", "ELECTRO", "DISCO", "GARAGE", "JUNGLE", "DUBSTEP", "DEMBOW", "AMAPIANO", "AFRO", "LATIN", "TRIBAL", "SYNTHWV", "CHIP", "ARCADE", "GLITCH", "INDUSTR", "HYPER", "AMBIENT", "JAZZ"], 0);
+  const KIT = E("KIT", ["ACOUSTIC", "DEEP", "TIGHT", "BRIGHT", "DUST", "808", "909", "606", "80S", "VINTAGE", "TRAP", "DRILL", "BOOMBAP", "LO-FI", "PHONK", "HOUSE", "D.HOUSE", "TECHNO", "MINIMAL", "ELECTRO", "DISCO", "GARAGE", "JUNGLE", "DUBSTEP", "DEMBOW", "BRASIL", "AFRO", "LATIN", "TRIBAL", "SYNTHWAVE", "CHIP", "ARCADE", "GLITCH", "INDUSTR", "HYPER", "AMBIENT", "JAZZ", "BRASIL 2"], 0);
   /* a GM note -> its drum lane (drums.c LANE_OF_GM: 35..81) */
   const LANE_OF_GM = [1, 0, 7, 2, 3, 8, 9, 4, 9, 6, 9, 5, 10, 10, 11, 10, 12, 11, 12, 13, 11, 15, 11, 13, 12, 14, 14, 14, 14, 14,
     14, 14, 15, 15, 13, 13, 15, 15, 13, 13, 7, 7, 7, 14, 14, 15, 15];
@@ -1479,12 +1497,12 @@ function makeMockDevice(opt = {}) {
         D("CRSH", F.PCT, 0, 127, 0), D("SWP", F.PCT, 0, 127, 0), D("VIB", F.PCT, 0, 127, 0), E("ARP", ["OFF", "OCT", "MAJ", "MIN"], 0), D("TONE", F.PCT, 0, 127, 127)],
       presets: [P("GAME LEAD", [0, 0, 32, 0, 0, 20, 0, 127], [0, 60, 90, 30], 1), P("GB BASS", [1, 1, 0, 0, 0, 0, 0, 90], [0, 50, 70, 20], 1),
         P("8BIT ARP", [2, 0, 96, 0, 0, 0, 2, 110], [0, 60, 80, 40], 0)] },
-    { name: "SAMPLE", titles: ["SET", "TONE"], edit: [E("SET", ["PIANO", "BASS", "VIBES", "HORNS", "STRGS", "FLUTE", "SCRCH", "PERC", "USR1", "USR2", "USR3"], 0), D("TUNE", F.SEMI, -24, 24, 0), D("BITS", F.INT, 0, 127, 0),
+    { name: "SAMPLE", titles: ["SET", "TONE"], edit: [E("SET", ["PIANO", "BASS", "VIBES", "HORNS", "STRGS", "FLUTE", "PERC", "USR1", "USR2", "USR3"], 0), D("TUNE", F.SEMI, -24, 24, 0), D("BITS", F.INT, 0, 127, 0),
         E("LOOP", NONOFF, 1), D("CUT", F.INT, 0, 127, 127), NONE, D("DRV", F.PCT, 0, 127, 0), NONE],
       presets: [P("DUSTY PNO", [0, 0, 20, 1, 104, 0, 14, 0], [0, 127, 127, 52], 0), P("UP BASS", [1, 0, 0, 1, 118, 0, 12, 0], [0, 127, 127, 26], 1),
         P("VIBES", [2, 0, 0, 1, 127, 0, 0, 0], [0, 127, 127, 72], 0), P("HORN STAB", [3, 0, 0, 1, 120, 0, 20, 0], [0, 127, 127, 22], 0),
         P("STRING STB", [4, 0, 0, 1, 122, 0, 10, 0], [0, 127, 127, 26], 0), P("LOFI FLUTE", [5, 0, 12, 1, 100, 0, 0, 0], [12, 80, 120, 60], 1),
-        P("SCRATCH", [6, 0, 0, 1, 127, 0, 8, 0], [0, 127, 127, 18], 0), P("GM KIT", [7, 0, 0, 0, 127, 0, 0, 0], [0, 127, 127, 60], 0),
+        P("GM KIT", [6, 0, 0, 0, 127, 0, 0, 0], [0, 127, 127, 60], 0),
         P("LOFI KEYS", [0, 0, 45, 1, 78, 0, 30, 0], [0, 127, 110, 60], 0), P("DEEP BASS", [1, -12, 0, 1, 90, 0, 40, 0], [0, 127, 127, 30], 1)] },
     { name: "VOICE", titles: ["VOWL", "TONE"], edit: [D("VOWL", F.INT, 0, 127, 0), D("VOWL2", F.INT, 0, 127, 64), D("TALK", F.TIME, 0, 127, 0),
         D("SHIFT", F.SEMI, -12, 12, 0), D("BUZZ", F.PCT, 0, 127, 64), D("BRTH", F.PCT, 0, 127, 10), D("Q", F.PCT, 0, 127, 64), D("RAND", F.PCT, 0, 127, 0)],
@@ -1501,7 +1519,7 @@ function makeMockDevice(opt = {}) {
         E("PERC", ["OFF", "2ND", "3RD", "2SOFT", "3SOFT", "2SLOW", "3SLOW"], 0), D("CLICK", F.PCT, 0, 127, 40), D("DRV", F.PCT, 0, 127, 0), E("ROTR", ["OFF", "SLOW", "FAST"], 1)],
       presets: [P("SOUL ORGAN", [3, 0, 0, 0, 0, 25, 10, 1], [0, 64, 127, 40], 0), P("GOSPEL", [6, 0, 0, 0, 1, 60, 40, 2], [0, 64, 127, 45], 0),
         P("JAZZ ORGAN", [4, 0, 0, 0, 2, 50, 8, 1], [0, 64, 127, 40], 0), P("DIRTY B3", [5, 0, 0, 0, 0, 60, 90, 2], [0, 64, 127, 40], 0)] },
-    { name: "GRAIN", titles: ["GRAN", "SPRY"], edit: [E("SRC", ["PIANO", "BASS", "VIBES", "HORNS", "STRGS", "FLUTE", "SCRCH", "PERC", "USR1", "USR2", "USR3"], 0),
+    { name: "GRAIN", titles: ["GRAN", "SPRY"], edit: [E("SRC", ["PIANO", "BASS", "VIBES", "HORNS", "STRGS", "FLUTE", "PERC", "USR1", "USR2", "USR3"], 0),
         D("POS", F.PCT, 0, 127, 32), D("SIZE", F.PCT, 0, 127, 80), D("DENS", F.PCT, 0, 127, 80),
         D("PTCH", F.SEMI, -24, 24, 0), D("SPRD", F.PCT, 0, 127, 30), D("RAND", F.PCT, 0, 127, 10), D("TONE", F.PCT, 0, 127, 127)],
       presets: [P("LOFI CLOUD", [0, 45, 95, 85, 0, 35, 12, 80], [70, 90, 120, 90], 0), P("VIBE HAZE", [2, 30, 100, 90, 0, 25, 10, 90], [50, 100, 120, 95], 0),
@@ -1536,6 +1554,7 @@ function makeMockDevice(opt = {}) {
     g: GP.map((d) => d.def),
     slots: [null, null, null, null],
     smp: [0, 1, 2].map(() => ({ flash: new Uint8Array(SMP.SLOT_SIZE).fill(0xFF), zones: 0, name: "", len: 0, next: SMP.DATA_OFF })),
+    sng: Array.from({ length: 12 }, () => ({ flash: new Uint8Array(4096).fill(0xFF), ok: false, open: false })),   /* v7: songs */
     bank: new Array(opt.slots || 32).fill(null),     /* user presets: {engine, name, p, pattern} */
     settings: Uint8Array.from({ length: 88 }, (_, i) => (i * 37 + 5) & 0xFF),   /* v6: the settings object (opaque here) */
     bkSnap: null, bkPut: null,
@@ -1681,7 +1700,7 @@ function makeMockDevice(opt = {}) {
         s(opt.legacy ? "FELUCCA 0.4 BETA (MOCK)" : opt.v3 ? "FELUCCA 0.8 (MOCK)" : "FELUCCA SLOOP 2.0 (MOCK)"); b(ENG.length); b(P_COUNT); b(G_COUNT); b(NSTEP); b(P_E0);
         ENG.forEach((e) => s(e.name));
         if (!opt.legacy) b(NTRK);
-        if (v5) b(opt.noBackup ? 5 : 6);                 /* v6: backup / restore */
+        if (v5) b(opt.noBackup ? 5 : opt.noSongs ? 6 : 7);   /* v6: backup / restore, v7: songs */
         break;
       case CMD.GET: case CMD.SET: {
         if (a.length < 2) return null;
@@ -1883,6 +1902,48 @@ function makeMockDevice(opt = {}) {
         b(op); b(id); b(rc);
         break;
       }
+      /* songs: like firmware/src/editor.c ed_sng_*() */
+      case CMD.SNG_BEGIN: case CMD.SNG_ERASE: {
+        if (opt.noSongs || a.length < 1 || a[0] >= 12) return null;
+        const u = st.sng[a[0]]; u.flash.fill(0xFF); u.ok = false; u.open = cmd === CMD.SNG_BEGIN;
+        b(a[0]); b(0);
+        break;
+      }
+      case CMD.SNG_WRITE: {
+        if (opt.noSongs || a.length < 5 || a[0] >= 12) return null;
+        const u = st.sng[a[0]], off = a[1] | (a[2] << 7) | (a[3] << 14), dat = unpack7(a.slice(4));
+        let rc = 0;
+        if (off < SNG.DATA || (off & 0xFF) || !dat.length || dat.length > 256 || off + dat.length > SNG.SECTOR) rc = 1;
+        else if (u.ok || !u.open) rc = 4;
+        else u.flash.set(dat, off);
+        b(a[0]); b(off); b(off >> 7); b(off >> 14); b(rc);
+        break;
+      }
+      case CMD.SNG_END: {
+        if (opt.noSongs || a.length < 2 || a[0] >= 12) return null;
+        const u = st.sng[a[0]], hd = unpack7(a.slice(1)), dv = new DataView(hd.buffer);
+        let rc = 0;
+        if (!u.open || u.ok) rc = 6;
+        else if (hd.length < SNG.HDR) rc = 1;
+        else {
+          const notes = dv.getUint16(22, true), len = dv.getUint32(24, true);
+          if (dv.getUint32(0, true) !== SNG.MAGIC || dv.getUint16(4, true) !== 1 || hd[6] !== Math.floor(a[0] / SNG.PER) || !notes || len !== notes * 4 || len > SNG.SECTOR - SNG.DATA) rc = 2;
+          else if (crc32(u.flash.subarray(SNG.DATA, SNG.DATA + len)) !== dv.getUint32(28, true)) rc = 3;
+          else { u.flash.set(hd.subarray(0, SNG.HDR), 0); u.ok = true; u.open = false; }
+        }
+        b(a[0]); b(rc);
+        break;
+      }
+      case CMD.SNG_INFO:
+        if (opt.noSongs) return null;
+        b(12); b(SNG.PER); v(SNG.SECTOR - SNG.DATA);
+        st.sng.forEach((u) => {
+          const dv = new DataView(u.flash.buffer);
+          v(u.ok ? dv.getUint16(22, true) : 0);
+          s(u.ok ? String.fromCharCode(...u.flash.subarray(8, 20).filter((c) => c)) : "");
+          v(u.ok ? dv.getUint16(20, true) : 0);
+        });
+        break;
       case CMD.SMP_INFO:
         b(3); b(SMP.SLOT_SIZE / 1024);
         st.smp.forEach((u) => { b(u.zones); s(u.zones ? u.name : ""); b(u.zones ? Math.ceil(u.len / 1024) : 0); });
@@ -1986,6 +2047,89 @@ function makeMockDevice(opt = {}) {
     stop: () => timers.forEach(clearInterval),
     access: { sysexEnabled: true, inputs: new Map([[input.id, input]]), outputs: new Map([[output.id, output]]), onstatechange: null },
   };
+}
+
+/* ---- songs for Piano Hero / FM Hero (firmware protocol v7, firmware/src/eng_sample.c SNG_*) ----
+ * A .mid becomes at most 960 notes of 4 bytes: u16 start (1/48 beat), u8 pitch, u8 length (1/12 beat). One song = one 4 KiB sector:
+ * 6 for Piano Hero (songs 0..5) and 6 for FM Hero (6..11). The header (32 bytes) is written last by the device. */
+const SNG = { KINDS: 2, PER: 6, SECTOR: 4096, DATA: 256, HDR: 32, MAXNOTES: 960, MAGIC: 0x474E5346, MAXFILE: 2 * 1024 * 1024 };
+const SNG_RC = { 1: "size", 2: "header", 3: "data CRC", 4: "flash", 5: "invalid", 6: "no begin" };
+class SongError extends Error { constructor(code, msg) { super(msg || code); this.code = code; } }
+/* a Standard MIDI File -> { notes: [{t, p, l}], bpm }; drums (channel 10) are left out */
+function midiNotes(bytes) {
+  const d = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes), dv = new DataView(d.buffer, d.byteOffset, d.byteLength);
+  if (d.length < 14 || dv.getUint32(0) !== 0x4D546864) throw new SongError("notMidi", "not a MIDI file");
+  const ntr = dv.getUint16(10), div = dv.getUint16(12);
+  if (div & 0x8000 || !div) throw new SongError("division", "SMPTE time is not supported");
+  let pos = 8 + dv.getUint32(4), bpm = 0;
+  const notes = [];
+  for (let tr = 0; tr < ntr && pos + 8 <= d.length; tr++) {
+    if (dv.getUint32(pos) !== 0x4D54726B) throw new SongError("notMidi", "bad track");
+    const end = Math.min(d.length, pos + 8 + dv.getUint32(pos + 4));
+    let p = pos + 8, tick = 0, run = 0;
+    const open = new Map();
+    const vlq = () => { let v = 0, c; do { if (p >= end) throw new SongError("notMidi", "short track"); c = d[p++]; v = (v << 7) | (c & 0x7F); } while (c & 0x80); return v >>> 0; };
+    while (p < end) {
+      tick += vlq();
+      let st = d[p];
+      if (st === 0xFF) {                                    /* meta */
+        const ty = d[p + 1]; p += 2; const n = vlq();
+        if (ty === 0x51 && n === 3 && !bpm) bpm = Math.round(60000000 / ((d[p] << 16) | (d[p + 1] << 8) | d[p + 2]));
+        p += n; if (ty === 0x2F) break; continue;
+      }
+      if (st === 0xF0 || st === 0xF7) { p++; p += vlq(); continue; }
+      if (st & 0x80) { run = st; p++; } else st = run;
+      const hi = st & 0xF0, ch = st & 15;
+      if (hi === 0x90 || hi === 0x80) {
+        const key = d[p], vel = d[p + 1]; p += 2;
+        const k = ch * 128 + key;
+        if (hi === 0x90 && vel > 0) { if (ch !== 9) { if (!open.has(k)) open.set(k, []); open.get(k).push(tick); } }
+        else if (open.has(k) && open.get(k).length) { const t0 = open.get(k).shift(); notes.push({ t: t0 / div, p: key, l: Math.max(1 / 48, (tick - t0) / div) }); }
+      } else if (hi === 0xC0 || hi === 0xD0) p += 1; else p += 2;
+    }
+    open.forEach((arr, k) => arr.forEach((t0) => notes.push({ t: t0 / div, p: k & 127, l: .25 })));   /* a note never released */
+    pos = end;
+  }
+  return { notes, bpm: bpm || 120 };
+}
+/* a .mid -> the song of the device: { kind, name, bpm, notes, data (notes x 4), hdr (32) } or throws SongError("empty" | "toolong" | "toomany") */
+function buildSong(bytes, kind, name) {
+  const m = midiNotes(bytes);
+  let n = m.notes.map((x) => ({ t: Math.round(x.t * 48), p: Math.max(0, Math.min(127, x.p)), l: Math.max(1, Math.min(255, Math.round(x.l * 12))) }));
+  if (!n.length) throw new SongError("empty", "no notes");
+  n.sort((a, b) => a.t - b.t || b.p - a.p);
+  if (n.length > SNG.MAXNOTES) {                               /* the melody only: the highest note of every start */
+    const sky = []; n.forEach((x) => { if (!sky.length || sky[sky.length - 1].t !== x.t) sky.push(x); });
+    n = sky;
+  }
+  if (n.length > SNG.MAXNOTES) throw new SongError("toomany", n.length + " notes (at most " + SNG.MAXNOTES + ")");
+  if (n[n.length - 1].t > 65535) throw new SongError("toolong", "too long");
+  const data = new Uint8Array(n.length * 4), dv = new DataView(data.buffer);
+  n.forEach((x, i) => { dv.setUint16(i * 4, x.t, true); data[i * 4 + 2] = x.p; data[i * 4 + 3] = x.l; });
+  const nm = String(name || "SONG").replace(/\.[^.]*$/, "").toUpperCase().replace(/[^A-Z0-9 ]/g, "").trim().slice(0, 12) || "SONG";
+  const bpm = Math.max(20, Math.min(300, m.bpm)), hdr = new Uint8Array(SNG.HDR), hv = new DataView(hdr.buffer);
+  hv.setUint32(0, SNG.MAGIC, true); hv.setUint16(4, 1, true); hdr[6] = kind & 1;
+  for (let i = 0; i < nm.length; i++) hdr[8 + i] = nm.charCodeAt(i);
+  hv.setUint16(20, bpm, true); hv.setUint16(22, n.length, true); hv.setUint32(24, data.length, true); hv.setUint32(28, crc32(data), true);
+  return { kind: kind & 1, name: nm, bpm, notes: n.length, data, hdr };
+}
+/* send it to song sid (kind * 6 + index): BEGIN, WRITE x 256 bytes, END; onProgress(0..1) */
+async function songSend(rq, sid, song, onProgress) {
+  let r = parse[CMD.SNG_BEGIN](await rq(req.sngBegin(sid), { timeout: 1500, retries: 0 }));
+  if (r.rc) throw new Error("begin rc " + r.rc);
+  for (let off = 0; off < song.data.length; off += 256) {
+    const a = SNG.DATA + off, w = parse[CMD.SNG_WRITE](await rq(req.sngWrite(sid, a, song.data.subarray(off, off + 256)), { timeout: 1500, retries: 1 }));
+    if (w.rc) throw new Error("write at 0x" + a.toString(16) + " rc " + w.rc);
+    if (onProgress) onProgress(Math.min(1, (off + 256) / song.data.length));
+  }
+  r = parse[CMD.SNG_END](await rq(req.sngEnd(sid, song.hdr), { timeout: 2500, retries: 0 }));
+  if (r.rc) throw new Error("end rc " + r.rc + " (" + (SNG_RC[r.rc] || "?") + ")");
+  return true;
+}
+async function songErase(rq, sid) {
+  const r = parse[CMD.SNG_ERASE](await rq(req.sngErase(sid), { timeout: 2500, retries: 0 }));
+  if (r.rc) throw new Error("erase rc " + r.rc);
+  return true;
 }
 /*PROTO-END*/
 
@@ -2446,6 +2590,8 @@ async function load(d) {
     }
     try { d.smp = parse[CMD.SMP_INFO](await d.link.request(req.smpInfo())); }
     catch (e) { if (e.message === "closed") throw e; d.smp = null; }   /* older firmware, or no flash */
+    d.sng = null;
+    if (d.info.proto >= 7) { try { d.sng = parse[CMD.SNG_INFO](await d.link.request(req.sngInfo())); } catch (e) { if (e.message === "closed") throw e; } }   /* v7: songs */
     d.keys = paramKeys(d.pdesc, d.info.pe0, d.info.pcount);
     await libAdopt(d);
     if (d.info.ntrk) d.sel = parse[CMD.TRACK](await d.link.request(req.track())).sel;   /* v3: the selected track */

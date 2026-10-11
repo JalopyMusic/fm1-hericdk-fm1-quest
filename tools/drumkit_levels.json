@@ -359,24 +359,6 @@
   "KICK2": -0.5,
   "SNARE2": 5.0
  },
- "AMAPIANO": {
-  "KICK": 1.75,
-  "SNARE": -0.5,
-  "CLAP": 10.75,
-  "CHH": 19.75,
-  "OHH": 14.0,
-  "TOMLO": -0.25,
-  "TOMHI": -0.75,
-  "CRASH": 0.0,
-  "RIDE": 4.5,
-  "SHAKER": -0.5,
-  "CONGA": -0.5,
-  "RIM": 6.75,
-  "COWBELL": 5.25,
-  "CLAVE": 1.75,
-  "KICK2": -2.25,
-  "SNARE2": 4.75
- },
  "AFRO": {
   "KICK": 2.0,
   "SNARE": 4.75,
@@ -430,24 +412,6 @@
   "CLAVE": 1.75,
   "KICK2": -0.5,
   "SNARE2": 5.0
- },
- "SYNTHWV": {
-  "KICK": 1.75,
-  "SNARE": -3.75,
-  "CLAP": 11.0,
-  "CHH": 13.25,
-  "OHH": 6.0,
-  "TOMLO": -1.75,
-  "TOMHI": -2.5,
-  "CRASH": -0.25,
-  "RIDE": 4.5,
-  "SHAKER": 1.5,
-  "CONGA": -0.25,
-  "RIM": 6.5,
-  "COWBELL": 5.25,
-  "CLAVE": 1.75,
-  "KICK2": 0.5,
-  "SNARE2": 3.25
  },
  "CHIP": {
   "KICK": 6.0,
@@ -574,5 +538,23 @@
   "CLAVE": 0.25,
   "KICK2": 4.0,
   "SNARE2": 5.75
+ },
+ "SYNTHWAVE": {
+  "KICK": 1.75,
+  "SNARE": -3.75,
+  "CLAP": 11.0,
+  "CHH": 13.25,
+  "OHH": 6.0,
+  "TOMLO": -1.75,
+  "TOMHI": -2.5,
+  "CRASH": -0.25,
+  "RIDE": 4.5,
+  "SHAKER": 1.5,
+  "CONGA": -0.25,
+  "RIM": 6.5,
+  "COWBELL": 5.25,
+  "CLAVE": 1.75,
+  "KICK2": 0.5,
+  "SNARE2": 3.25
  }
 }

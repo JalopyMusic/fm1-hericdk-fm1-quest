@@ -34,16 +34,49 @@ static uint32_t pow2_q16(int32_t d16)
 }
 
 /* ---- user sample slots (loaded from the web editor into flash, see web/EDITOR_PROTOCOL.md)
- * 3 slots of 80 KiB at flash 0xA0000.. (Felucca data region), read through the plain XIP
+ * 3 slots of 64 KiB at flash 0xA0000.. (Felucca data region), read through the plain XIP
  * window. Slot = header (magic, count, name, data length, CRC32) + up to 16 zones in the
  * smp_zone_t layout (off relative to the slot's data at +512) + IMA ADPCM data. */
 #include "../hal/fm1_xip.h"   /* relative: hostsim includes this file too */
 #define SMP_USER_SLOTS 3
 #define SMP_USER_BASE 0xA0000u
-#define SMP_USER_SIZE 0x14000u
+#define SMP_USER_SIZE (64u << 10)
 #define SMP_USER_DATA 512u
 #define SMP_USER_MAGIC 0x504D5346u                  /* "FSMP" */
 #define SMP_NALL (SMP_NSETS + SMP_USER_SLOTS)
+/* ---- user songs (Piano Hero and FM Hero), loaded from the web editor: 2 kinds x 6 sectors of 4 KiB at flash
+ * 0xD0000..0xDBFFF (what the samples gave up: 3 x 16 KiB). One song = one sector: header (32 B) at +0, notes from +256,
+ * 4 bytes each: u16 start (1/48 beat), u8 pitch, u8 length (1/12 beat). The header is written last, so a header
+ * is a complete song; the data CRC is checked when it is loaded (SNG_END). */
+#define SNG_BASE 0xD0000u
+#define SNG_KINDS 2u                                /* 0 = Piano Hero, 1 = FM Hero */
+#define SNG_PER 6u
+#define SNG_N (SNG_KINDS * SNG_PER)
+#define SNG_SECTOR 0x1000u
+#define SNG_DATA 256u
+#define SNG_MAGIC 0x474E5346u                       /* "FSNG" */
+typedef struct {
+    uint32_t magic;
+    uint16_t version;
+    uint8_t kind, rsv;
+    char name[12];
+    uint16_t bpm, notes;
+    uint32_t data_len, crc;
+} sng_hdr_t;                                        /* 32 B */
+static uint8_t sng_ok[SNG_N];                       /* 1 = a valid song in the sector (the scan trusts the header) */
+static const sng_hdr_t *sng_hdr(uint32_t sid) { return (const sng_hdr_t *)fm1_xip_ptr(SNG_BASE + sid * SNG_SECTOR); }
+static void sng_scan(uint32_t sid)
+{
+    const sng_hdr_t *h = sng_hdr(sid);
+    sng_ok[sid] = h->magic == SNG_MAGIC && h->version == 1u && h->kind == sid / SNG_PER && h->notes &&
+                  h->data_len == (uint32_t)h->notes * 4u && h->data_len <= SNG_SECTOR - SNG_DATA;
+}
+static void sng_scan_all(void)
+{
+    uint32_t i;
+    for (i = 0; i < SNG_N; i++)
+        sng_scan(i);
+}
 typedef struct {
     uint32_t magic;
     uint16_t version;

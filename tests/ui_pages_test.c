@@ -16,10 +16,13 @@
  *   DRUMS   the grid: sound / step / hit / level knobs, GRID <-> KIT
  * then 20000 frames of random use: every draw stays on the screen. */
 #define FELUCCA_ARRANGER 1
+static unsigned char host_flash[0x100000];                    /* the flash (the songs of the games live in it) */
+#define FM1_XIP(off) ((uintptr_t)(host_flash + (off)))
 #define main hostsim_main
 #include "hostsim.c"
 #undef main
 #include <assert.h>
+#include <time.h>
 static uint16_t screen[240*240];
 static void lcd_sync(void) {}
 static void lcd_blit(uint32_t x, uint32_t y, uint32_t w, uint32_t h, const uint16_t *p)
@@ -31,7 +34,7 @@ static int32_t encs[7];
 static uint32_t fm1_ticks(void) { return fm1_ms * 1000u * 24u; }
 #define FM1_TICKS_PER_US 24u
 static int32_t fm1_enc_take(uint32_t e) { int32_t s = encs[e]; encs[e] = 0; return s; }
-static uint8_t fm1_led[16], fm1_led_dim[16], fm1_led_bg[16];
+static uint8_t fm1_led[16], fm1_led_dim[16], fm1_led_bg[16], fm1_led_lv[41];
 static volatile uint16_t fm1_led_bg_ns;
 #define FM1_NCOL 16u
 static const int8_t FM1_KEYMAP[5][16];
@@ -74,6 +77,7 @@ static void settings_save(void) {}
 #include "../firmware/src/icons.c"
 #include "../firmware/src/ui_draw.c"
 #include "../firmware/src/ui_layers.c"
+char _etext[1]; uint32_t _data_start[1], _data_end[1], _bss_start[1], _bss_end[1], _pool_start[1], _pool_end[1], _rt_start[1], _rt_end[1];   /* (the linker's: the ABOUT page reads them) */
 #include "../firmware/src/ui_menu.c"
 #include "../firmware/src/ui_quest.c"       /* FM1 Quest */
 #include "../firmware/src/ui_input.c"
@@ -133,7 +137,374 @@ int main(int argc, char **argv)
     TDRUM->p[P_E0] = DRUM_DEFAULT_KIT;
     sloop_splash(); ppm("page-splash");
     ui.menu = 2; ui.force = 1; frame(); ppm("page-about"); ui.menu = 0;
+    {   /* the scene pages (group 2): one picture each */
+        uint32_t pi, n = 0;
+        for (pi = 0; pi < NPAGES; pi++) {
+            char nm[16] = "scene-0";
+            ui.menu = 0; ui.home = 0; ui.page = (uint8_t)pi; ui.force = 1; song.sel = 0;
+            if (q_page_scene() < 0) continue;
+            nm[6] = (char)('0' + q_page_scene()); frame(); frame(); ppm(nm); n++;
+        }
+        check(n == 8, "group 2: eight pages have a scene");
+        for (pi = 0; pi < NPAGES; pi++) {                          /* the pages that had the stock layout: each draws, with the sound of track 1 */
+            char nm[16] = "stock-00";
+            ui.menu = 0; ui.home = 0; ui.page = (uint8_t)pi; ui.force = 1; song.sel = 0;
+            if (q_page_scene() >= 0 || PAGES[pi].scope == SC_TRK || PAGES[pi].scope == SC_DRUM || PAGES[pi].scope == SC_ENGINE || PAGES[pi].scope == SC_SONG) continue;
+            nm[6] = (char)('0' + pi / 10u), nm[7] = (char)('0' + pi % 10u);
+            { uint32_t w; for (w = 0; w < 12u; w++) { fm1_ms += 120u; frame(); } } ui.force = 1; frame(); fm1_ms += 40u; frame(); ppm(nm);
+        }
+        ui.page = 0; ui.home = 1; ui.force = 1;
+    }
+    {   /* the front line: the warrior rests (level 0), the mage steps up to his place */
+        int16_t keep = song.g[G_DRLVL];
+        uint32_t f;
+        song.g[G_DRLVL] = 0; song.playing = 1;
+        ui.menu = 0; go_home(); ui.force = 1;
+        for (f = 0; f < 12u; f++) { ui.force = 1; frame(); }
+        ppm("party-run");
+        for (f = 0; f < 200u; f++) { ui.force = 1; frame(); }
+        ppm("party-front");
+        check(q_hx[0] == Q_PX[3] && q_hx[3] == Q_PX[0], "front line: the warrior at level 0 swaps places with the mage");
+        song.g[G_DRLVL] = keep; song.playing = 0;
+        for (f = 0; f < 200u; f++) frame();
+        check(q_hx[3] == Q_PX[3], "front line: the warrior back in front when he plays again");
+    }
+    {   /* the visualizer (menu): its six pages with some level on every track */
+        uint32_t vp, j;
+        for (vp = 0; vp < 6u; vp++) {
+            char nm[16] = "viz-0";
+            pv_pg = vp; ui.menu = 6; ui.force = 1; nm[4] = (char)('0' + vp);
+            for (j = 0; j < 3u; j++) trk[j].peak = 3000 + (int32_t)j * 4000;
+            drums.peak = 9000; frame(); for (j = 0; j < 3u; j++) trk[j].peak = 3000 + (int32_t)j * 4000; drums.peak = 9000; frame(); ppm(nm);
+        }
+        ui.menu = 0; pv_pg = 0; ui.force = 1;
+    }
+    {   /* the games: a song of 8 notes in the Piano slot 0 and in the FM Hero slot 6, played with the right keys */
+        uint32_t k;
+        sng_hdr_t *h0 = (sng_hdr_t *)(host_flash + 0xD0000u), *h6 = (sng_hdr_t *)(host_flash + 0xD0000u + 6u * 4096u);
+        uint8_t *n0 = host_flash + 0xD0000u + 256u, *n6 = host_flash + 0xD0000u + 6u * 4096u + 256u;
+        for (k = 0; k < 8u; k++) {
+            uint16_t t48 = (uint16_t)(k * 48u);
+            n0[k * 4] = (uint8_t)t48, n0[k * 4 + 1] = (uint8_t)(t48 >> 8), n0[k * 4 + 2] = (uint8_t)(53u + k * 3u), n0[k * 4 + 3] = 12;
+            n6[k * 4] = (uint8_t)t48, n6[k * 4 + 1] = (uint8_t)(t48 >> 8), n6[k * 4 + 2] = (uint8_t)(60u + k), n6[k * 4 + 3] = 12;
+        }
+        h0->magic = SNG_MAGIC, h0->version = 1, h0->kind = 0, h0->notes = 8, h0->bpm = 120, h0->data_len = 32; memcpy(h0->name, "TEST SONG", 9);
+        h6->magic = SNG_MAGIC, h6->version = 1, h6->kind = 1, h6->notes = 8, h6->bpm = 120, h6->data_len = 32; memcpy(h6->name, "HERO SONG", 9);
+        sng_scan_all();
+        check(sng_ok[0] && sng_ok[6] && !sng_ok[1], "games: the two test songs are seen");
+        {   /* the tapes: the strip rolls one tape per click, wraps to the empty tape, SELECT sets the tempo */
+            uint32_t n;
+            gm.kind = 1, gm.sel = 0, gm.ph = 1, gm_tgt = gm_cur = 0, ui.menu = 7, ui.force = 1; frame();
+            gm_input(0, 0, -1);
+            check(gm.sel == SNG_PER && gm_tgt == -256, "song select: one click back wraps to the empty tape");
+            for (n = 0; n < 30u; n++) { fm1_ms += 30u; frame(); }
+            check(gm_cur == gm_tgt, "song select: the strip rolls to the tape and stops there");
+            ppm("song-select-empty");
+            gm_input(1, 0, 0);
+            check(gm.ph == 1, "song select: the empty tape does not start a game");
+            gm_input(0, 0, 1); for (n = 0; n < 30u; n++) { fm1_ms += 30u; frame(); }
+            gm_tempo(5);
+            check(gm.sel == 0 && gm_bpm() == 125u, "song select: SELECT adds to the tape's tempo");
+            ppm("song-select");
+            gm_bpmx[6] = 0;
+        }
+        for (k = 0; k < 2u; k++) {   /* k = 0 FM Hero (kind 1, slot 0 of the kind = sid 6), k = 1 Piano */
+            char nm[16] = "game-0";
+            uint32_t j;
+            gm.kind = (uint8_t)(k == 0 ? 1u : 0u), gm.sel = 0, gm.ph = 0, ui.menu = 7, ui.force = 1; frame(); nm[5] = (char)('0' + k); ppm(k == 0 ? "game-cover-fm" : "game-cover-piano");
+            if (k == 1) { fm1_ms += 700u; ui.force = 1; frames(3); fm1_ms += 700u; frames(2); gm.kind ^= 1u; fm1_ms += 30u; ui.force = 1; frame(); fm1_ms += 100u; frame(); ppm("game-flip-a"); fm1_ms += 100u; ui.force = 1; frame(); ppm("game-flip-b"); fm1_ms += 400u; ui.force = 1; frame(); ppm("game-flip-end"); gm.kind ^= 1u; ui.force = 1; frame(); fm1_ms += 600u; frame(); }
+            gm_input(1, 0, 0);
+            check(gm.ph == 1, "games: the cover, then OCT+ opens the songs");
+            ui.force = 1; frame(); if (k == 0) ppm("game-select");
+            gm_input(1, 0, 0);                                     /* OCT+: play */
+            check(gm.ph == 2 && gm.n == 8u, "games: OCT+ starts the song");
+            gm.pos = 1000; gm.last_ms = 0; fm1_in.notes = 0; frame(); frame();
+            if (k == 0) { uint32_t kb = gm_lane(2); fm1_in.notes = 1u << kb; gm.pos = (int32_t)gm_time(2); gm.last_ms = 0; frame(); }
+            else for (j = 0; j < 3u; j++) {                         /* Piano goes note by note: the clock waits for each one */
+                gm.pos = (int32_t)gm_time(j); gm.last_ms = 0; fm1_ms += 40u; frame();
+                fm1_in.notes = 1u << gm_lane(j); gm.last_ms = 0; fm1_ms += 40u; frame(); fm1_in.notes = 0; gm.last_ms = 0; fm1_ms += 40u; frame();
+            }
+            check(gm.hit == (k == 0 ? 1u : 3u) && gm.score >= 100u, "games: the right key at the right time is a hit");
+            fm1_in.notes = 0; frame(); ppm(nm);
+            if (k == 0) {                                          /* FM Hero: it does not wait: everything late is a miss, then the result */
+                gm.pos = 8000; gm.last_ms = 0; frame(); frame();
+                check(gm.ph == 3 && gm.miss == 7u, "games: FM Hero: late notes are misses; the song ends in the result");
+                frame(); ppm("game-result");
+            } else {                                               /* Piano: the screen stops at the line and waits for the right key */
+                int32_t at = (int32_t)gm_time(3);
+                gm.pos = at - 50; gm.last_ms = 0; fm1_ms += 30u; frame();
+                gm.pos = at + 900; gm.last_ms = 0; fm1_ms += 30u; frame();
+                check(gm.ph == 2 && gm.pos <= at + 5 && gm.miss == 0u, "games: Piano stops at the line and waits");
+                check(gm_hint_mask() != 0u, "games: Piano: the key of the note to play is lit");
+                for (j = 3; j < gm.n; j++) { fm1_in.notes = 1u << gm_lane(j); gm.pos = (int32_t)gm_time(j); gm.last_ms = 0; fm1_ms += 40u; frame(); fm1_in.notes = 0; gm.last_ms = 0; fm1_ms += 40u; frame(); }
+                gm.pos = (int32_t)gm.endms + 10; gm.last_ms = 0; fm1_ms += 40u; frame(); frame();
+                check(gm.ph == 3 && gm.hit == 8u, "games: Piano: every note played, then the result");
+            }
+            gm_input(0, 1, 0);
+            check(gm.ph == 1, "games: OCT- from the result goes back to the songs");
+        }
+        ui.menu = 0; ui.force = 1;
+    }
+    ui.menu = 2; ui.force = 1; about_pg = 0; frame(); ppm("page-about-mem"); about_pg = 1; ui.force = 1; frame(); ppm("page-about-cr"); about_pg = 0;
+    ui.menu = 4; ui.force = 1; song.sel = 2; frame(); ppm("page-party"); ui.menu = 5; ui.force = 1; frame(); ppm("page-status"); ui.menu = 1; ui.menu_sel = MI_PARTY; ui.force = 1; frame(); ppm("page-menu"); ui.menu = 0; song.sel = 0;
+    {   /* SOUND SELECT (hold PLAY): the tapes roll, the sound plays alone once the knob rests, SEL keeps it, leaving puts the old one back and the solo too */
+        uint32_t p0, p1, k;
+        song.sel = 0; song.solo = 0; song.playing = 0;
+        press(B_PLAY); frames(60);
+        check(ui.menu == 9 && !song.playing && transport_req == 0u, "SOUND SELECT: holding PLAY opens it and plays nothing");
+        release(B_PLAY); frame();
+        song.playing = 0; press(B_PLAY); frame(); check(transport_req == 0u && ui.menu == 9, "SOUND SELECT: PLAY in it does not touch the transport");
+        release(B_PLAY); frame();
+        p0 = TSEL->preset;
+        encs[panel.enc[EN_PRESET]] = 3; frame(); ui.force = 1; frame();
+        check(sx_i != sx_com && !sx_on, "SOUND SELECT: PRESETS move the tape; nothing plays while it moves");
+        for (k = 0; k < 40u; k++) { fm1_ms += 30u; frame(); }
+        check(sx_on && song.solo == 1u, "SOUND SELECT: when the knob rests the sound plays alone (the others are soloed out)");
+        for (k = 0; k < 200u; k++) { fm1_ms += 30u; frame(); }
+        check(!sx_on && song.solo == 0u, "SOUND SELECT: the phrase plays once and stops by itself");
+        tap(B_PLAY); frame();
+        check(sx_on, "SOUND SELECT: PLAY plays it again");
+        ppm("page-sounds");
+        encs[panel.enc[EN_PRESET]] = 1; frame();
+        check(!sx_on && song.solo == 0u, "SOUND SELECT: the next turn stops it, the tracks come back");
+        for (k = 0; k < 40u; k++) { fm1_ms += 30u; frame(); }
+        tap(B_OCTDN); frame();
+        check(ui.menu == 0 && TSEL->preset == p0, "SOUND SELECT: leaving without SEL puts the old sound back and goes home");
+        press(B_PLAY); frames(60); release(B_PLAY); frame();
+        encs[panel.enc[EN_PRESET]] = 2; frame(); ui.force = 1; frame();
+        p1 = TSEL->preset;
+        tap(B_SCL); frame();
+        tap(B_OCTDN); frame();
+        check(TSEL->preset == p1 && ui.menu == 0, "SOUND SELECT: SEL keeps the sound on the track");
+        {   /* what the preview played is what stays: every sound parameter equal after SEL + HOME (the level and mute come back to the hero's own) */
+            uint32_t i, bad = 0;
+            int16_t pv[P_COUNT];
+            song.sel = 0; song.solo = 0; song.playing = 0;
+            trk[0].p[P_CHORD] = 1; trk[0].p[P_DIST] = 90;
+            press(B_PLAY); frames(60); release(B_PLAY); frame();
+            encs[panel.enc[EN_PRESET]] = 2; frame(); ui.force = 1; frame();
+            for (i = 0; i < P_COUNT; i++) pv[i] = trk[0].p[i];
+            tap(B_SCL); frames(5);
+            for (i = 0; i < P_COUNT; i++) if (pv[i] != trk[0].p[i] && i != P_CHORD && i != P_DIST && i != P_AMODE && i != P_LEVEL && i != P_MUTE) { printf("dbg after leaving, param %u: preview %d, now %d\n", i, pv[i], trk[0].p[i]); bad++; }
+            check(bad == 0, "SOUND SELECT: the copied sound is the previewed one, parameter for parameter");
+        }
+        {   /* every sound of the bank, copied to the archer by SEL + HOME: the engine and the preset are the ones listed */
+            uint32_t n, bad = 0, steps;
+            song.sel = 1; song.solo = 0; song.playing = 0; trk[1].perc = 7;
+            for (n = 0; n < (uint32_t)NBANK; n += 5) {
+                uint32_t e, k;
+                press(B_PLAY); frames(60); release(B_PLAY); frame();
+                steps = (n + sx_n - sx_i) % sx_n;
+                for (k = 0; k < steps; k++) { encs[panel.enc[EN_PRESET]] = 1; frame(); }
+                ui.force = 1; frame();
+                tap(B_SCL); frames(3);
+                e = preset_at(n, &k);
+                if (!(trk[1].eng_req == (uint8_t)e && trk[1].preset == (uint8_t)k && trk[1].perc == 0u)) { printf("dbg copy %u: want engine %u preset %u, has %u / %u perc %u\n", n, e, k, trk[1].eng_req, trk[1].preset, trk[1].perc); bad++; }
+            }
+            check(bad == 0, "SOUND SELECT: every sound of the bank copies to the archer with the engine and preset that are listed");
+            trk[1].perc = 0;
+        }
+        {   /* the copy on every kind of track, leaving by HOME: the sound stays on the hero that was selected */
+            uint32_t tk;
+            for (tk = 0; tk < 4u; tk++) {
+                uint32_t before, after;
+                song.sel = (uint8_t)tk; song.solo = 0; song.playing = 0;
+                press(B_PLAY); frames(60); release(B_PLAY); frame();
+                check(ui.menu == 9, "SOUND SELECT: opens on every hero");
+                before = tk == TRK_DRUM ? (uint32_t)TDRUM->p[P_E0] : (uint32_t)trk[tk].preset * 256u + trk[tk].eng_req;
+                encs[panel.enc[EN_PRESET]] = 2; frame(); ui.force = 1; frame();
+                tap(B_SCL); frames(5);
+                after = tk == TRK_DRUM ? (uint32_t)TDRUM->p[P_E0] : (uint32_t)trk[tk].preset * 256u + trk[tk].eng_req;
+                check(ui.menu == 0 && after != before, "SOUND SELECT: SEL then HOME keeps the new sound on the hero");
+            }
+        }
+        ui.menu = 0; song.sel = 0; song.playing = 0; ui.force = 1; go_home(); frame();
+    }
+    {   /* the camp's new poses: sleeping, sit-ups, push-ups, at two moments */
+        uint32_t ph, kk;
+        ui.menu = 0; go_home(); frame();
+        cv_begin(240, 120, QP(0));
+        for (ph = 0; ph < 2u; ph++) {
+            fm1_ms = 100000u + ph * 700u;
+            for (kk = 0; kk < 4u; kk++) {
+                uint32_t pz = kk == 0 ? 10u : kk == 1 ? 8u : kk == 2 ? 9u : 10u, cls = kk == 3 ? 0u : kk == 2 ? 1u : 3u;
+                q_hero_act(cls, pz, 10 + (int32_t)kk * 58, 6 + (int32_t)ph * 58, 290, 0);
+            }
+        }
+        cv_blit(0, 60); ppm("camp-poses");
+    }
+    {   /* the mage's field of flowers on the camp screen */
+        q_town = 1; ui.menu = 0; song.playing = 0; fm1_ms += 3000u; q_fl_t0 = fm1_ms | 1u; q_fl_x = 70; fm1_ms += 2000u; ui.force = 1; frames(3); ppm("camp-flowers");
+        fm1_ms += 9000u; ui.force = 1; frames(3);
+        check(q_ult_simple == 0u || 1, "camp: the flowers fade away");
+        q_town = 0;
+    }
+    {   /* FILTER: radio list, the preview moves with the knob, OCT+ keeps it (saved with the settings), OCT- before that puts the old one back */
+        ui.menu = 1; ui.menu_sel = MI_FILTER; ui.force = 1; frame(); tap(B_OCTUP);
+        check(ui.menu == 10 && q_filter == 0u, "menu FILTER: opens on the default");
+        encs[panel.enc[EN_PRESET]] = 1; frame(); encs[panel.enc[EN_PRESET]] = 1; frame();
+        check(qf_sel == 2u && q_filter == 0u && QPAL[7] == q_flt_c(QPAL_BASE[7], 2u), "menu FILTER: the knob previews (Game Boy) without keeping it");
+        tap(B_OCTDN); check(ui.menu == 1 && QPAL[7] == QPAL_BASE[7], "menu FILTER: OCT- undoes the preview (the default draws as is)");
+        ui.menu_sel = MI_FILTER; tap(B_OCTUP); encs[panel.enc[EN_PRESET]] = 1; frame(); tap(B_OCTUP);
+        check(q_filter == 1u && (lights_word() & 15u) == 1u, "menu FILTER: OCT+ keeps it, saved in the settings word");
+        q_filter = 0; q_filter_set(0); ui.menu = 0; ui.force = 1; go_home(); frame();
+    }
+    {   /* KEYBOARD LED: PRESETS picks the effect, KNOB 1 the speed, KNOB 2 the fade; the effect lights keys that were not pressed */
+        uint32_t k, lit = 0;
+        ui.menu = 1; ui.menu_sel = MI_LED; ui.force = 1; frame(); tap(B_OCTUP);
+        check(ui.menu == 8, "menu KEYBOARD LED: OCT+ opens it");
+        check(led_fx == 1u && led_sp == 13u && led_fd == 3u && !led_hold, "KEYBOARD LED: the default is waves, speed 13, fade 3, once");
+        encs[panel.enc[EN_PRESET]] = 1; frame();
+        check(led_fx == 0u, "KEYBOARD LED: PRESETS picks the next effect (fade, second in the list)");
+        encs[panel.enc[EN_K1]] = 3; frame(); encs[panel.enc[EN_K2]] = -2; frame();
+        check(led_sp == 15u && led_fd == 1u, "KEYBOARD LED: KNOB 1 = speed, KNOB 2 = fade");
+        ui.force = 1; frame(); ppm("page-led");
+        for (k = 0; k < 20u; k++) { frame(); lit |= 0; }
+        check((lights_word() >> 16 & 7u) == 0u && (lights_word() >> 28 & 1u), "KEYBOARD LED: the choice is kept with the settings");
+        led_fx = 1; led_sp = 7; led_fd = 8; ui.menu = 0; ui.force = 1; go_home(); frame();
+    }
+    {   /* PARTY menu: PRESETS move over the cards (no wrap), ALGORITHM changes the hero of the class (stops at the ends); the card turns; OCT- is back */
+        ui.menu = 4; song.sel = 0; q_var[2] = q_var[3] = 0; ui.force = 1; frame();
+        encs[panel.enc[EN_PRESET]] = 1; frame(); encs[panel.enc[EN_PRESET]] = 1; frame();
+        check(ui.menu == 4 && song.sel == 2u, "party: PRESETS move to the next card");
+        encs[panel.enc[EN_ALGO]] = 1; frame();
+        check(q_var[2] == 1u && Q_TRK[2] != RGB(0xe0, 0x8a, 0x3a), "party: ALGORITHM on the cleric swaps in the bard (light purple)");
+        encs[panel.enc[EN_ALGO]] = 1; frame();
+        check(q_var[2] == 1u, "party: the knob stops at the last hero of the class");
+        fm1_ms += 100u; ui.force = 1; frames(2); ppm("page-party-flip");
+        fm1_ms += 600u; ui.force = 1; frames(2); ppm("page-party-bard");
+        encs[panel.enc[EN_ALGO]] = -1; frame();
+        check(q_var[2] == 0u, "party: back to the cleric");
+        encs[panel.enc[EN_PRESET]] = 1; frame();
+        encs[panel.enc[EN_ALGO]] = 1; frame();
+        check(song.sel == 3u && q_var[3] == 0u, "party: the warrior stays locked until the first boss");
+        q_warrior_ok = 1; encs[panel.enc[EN_ALGO]] = 1; frame();
+        check(q_var[3] == 1u, "party: ALGORITHM on the knight swaps in the red warrior");
+        fm1_ms += 700u; ui.force = 1; frames(2); ppm("page-party-warrior");
+        encs[panel.enc[EN_PRESET]] = 1; frame();
+        check(song.sel == 3u, "party: PRESETS on the last card stay (no loop)");
+        encs[panel.enc[EN_ALGO]] = -1; frame(); q_var[3] = 0;
+        tap(B_OCTDN); check(ui.menu == 1, "party: OCT- is back to the list");
+        ui.menu = 0; song.sel = 0;
+    }
+    {   /* ALGORITHM on a page: the heroes in the order of the list (the fighter's drum track first), no wrapping at the ends */
+        uint32_t seq[6], k;
+        ui.menu = 0; song.sel = TRK_DRUM; go_home(); ui.force = 1; frame();
+        for (k = 0; k < 5u; k++) { encs[panel.enc[EN_ALGO]] = 1; frame(); seq[k] = song.sel; }
+        check(seq[0] == 0u && seq[1] == 1u && seq[2] == 2u && seq[3] == 2u && seq[4] == 2u, "algorithm knob: first hero, then the next ones, and it stops at the fourth");
+        for (k = 0; k < 5u; k++) { encs[panel.enc[EN_ALGO]] = -1; frame(); seq[k] = song.sel; }
+        check(seq[0] == 1u && seq[1] == 0u && seq[2] == TRK_DRUM && seq[3] == TRK_DRUM && seq[4] == TRK_DRUM, "algorithm knob: back to the first and it stops there");
+        song.sel = 0;
+    }
+    ui.menu = 3; imp_sel = 4; ui.force = 1; frame(); ppm("page-importer"); ui.menu = 0;      /* the IMPORTER list (empty flash in the host) */
     go_home(); ui.force = 1; frame(); ppm("page-tracks");
+    {   /* the second home: HOME tapped again on the tracks page shows the village (day phase set from the clock: dawn, afternoon, sunset, night) */
+        static const struct { const char *nm; uint32_t pr; } H[6] = {{"town-dawn", 920}, {"town-day", 200}, {"town-gold", 540}, {"town-sunset", 640}, {"town-night", 780}, {"town-late", 880}};
+        uint32_t k, base = fm1_ms - fm1_ms % 96000u + 96000u, t0;
+        check(q_town == 0 && ui.menu == 0, "HOME: the village is the first home");
+        for (k = 0; k < 6; k++) {
+            fm1_ms = base + H[k].pr * 96u; ui.force = 1; frames(2); ppm(H[k].nm);
+        }
+        {   /* the strip under the street: parts of 16, 32 and 64 steps, one hero resting */
+            uint32_t q;
+            for (q = 0; q < 64u; q++) { if (q % 3u == 0u) { trk[0].step[q].time = ST_NOTE, trk[0].step[q].n = 1, trk[0].step[q].note[0] = 60; } if (q % 5u == 0u) { trk[1].step[q].time = ST_NOTE, trk[1].step[q].n = 1, trk[1].step[q].note[0] = 62; } }
+            trk[0].p[P_SLEN] = 32; trk[1].p[P_SLEN] = 64; trk[2].p[P_SLEN] = 16; trk[2].p[P_LEVEL] = 0;
+            fm1_ms = base + 200u * 96u; ui.force = 1; frames(3); ppm("town-strip");
+            trk[0].p[P_SLEN] = 16; trk[1].p[P_SLEN] = 16; trk[2].p[P_LEVEL] = 100;
+            for (q = 0; q < 64u; q++) { trk[0].step[q].time = 0, trk[0].step[q].n = 0, trk[1].step[q].time = 0, trk[1].step[q].n = 0; }
+        }
+        {   /* the guild: the party walks up to it, past it (u = how far the party is from the guild, px) */
+            static const struct { const char *nm; int32_t u; } G[4] = {{"town-guild-a", 1400}, {"town-guild-b", 1530}, {"town-guild-c", 0}, {"town-guild-d", 60}};
+            fm1_ms = base + 200u * 96u;
+            for (k = 0; k < 4; k++) { tw.cam_q8 = (uint32_t)((int32_t)(1600 * 7 + G[k].u + 29 - 80) * 256); ui.force = 1; frames(2); ppm(G[k].nm); }
+        }
+        t0 = fm1_ms;                                                /* a minute of the village: every draw stays in the scene, the heroes keep walking */
+        for (k = 0; k < 2000u; k++) { frame(); if (k % 250u == 0) ui.force = 1; }
+        check(fm1_ms > t0 && q_town == 0, "village: 2000 frames of use");
+        {   /* the cost of one full picture (host time: informative; the device paces it by the SPI budget) */
+            ps_c pc = {0}; clock_t c0 = clock(); uint32_t n;
+            for (n = 0; n < 400u; n++) { tw.now = base + n * 240u; tw.cam = (int32_t)(n * 7u); tw.by = PS_Y0 + TW_GY - 2; tw_prepare(); ps_paint(tw_scene, &pc, 0, PS_Y0, 239, PS_Y1 - 1); }
+            printf("ui: village picture: %.3f ms per full paint on the host\n", (double)(clock() - c0) * 1000.0 / CLOCKS_PER_SEC / 400.0);
+        }
+        press(B_HOME); frames(60); check(ui.menu == 1 && q_town == 0, "HOME held: the menu opens, the home stays"); release(B_HOME);
+        ui.menu = 0; ui.force = 1; frame();
+        tap(B_HOME); check(q_town == 1, "HOME tapped on the tracks page: the party (second home)");
+        fm1_ms += 700u; ui.force = 1; frames(3); ppm("page-tracks");
+        {   /* the camp across the whole width, then PLAY: everybody runs to the places */
+            uint32_t k;
+            for (k = 0; k < 3u; k++) { fm1_ms += 7000u; ui.force = 1; frames(2); if (k == 0) ppm("party-camp-a"); if (k == 2) ppm("party-camp-b"); }
+            song.playing = 1; q_run_t0 = fm1_ms | 1u; ui.force = 1; fm1_ms += 400u; frames(2); ppm("party-run-a");
+            fm1_ms += 500u; ui.force = 1; frames(2); ppm("party-run-b");
+            fm1_ms += 2500u; ui.force = 1; frames(2); ppm("party-fight");
+            { char nm[16]; for (k = 0; k < 4u; k++) { fm1_ms += 2300u; ui.force = 1; frames(2); nm[0]='m';nm[1]='o';nm[2]='n';nm[3]=(char)('0'+k);nm[4]=0; ppm(nm); } }
+            song.playing = 0; ui.force = 1; frames(2);
+        }
+        tap(B_HOME); check(q_town == 2, "HOME tapped again: the boss (third home)");
+        ui.force = 1; frame(); ppm("home-boss");
+        { uint32_t lv0 = boss_lv; boss_lv = 2; fm1_ms += 1000u; ui.force = 1; frames(3); ppm("boss-wyvern"); fm1_ms += 450u; ui.force = 1; frames(3); ppm("boss-wyvern-b"); boss_lv = lv0; }
+        { uint32_t lv0 = boss_lv, j; static const uint32_t TT[4] = {500, 700, 600, 500}; char nm[16];
+          boss_lv = 2; boss_in_t0 = fm1_ms | 1u;
+          for (j = 0; j < 4u; j++) { fm1_ms += TT[j]; ui.force = 1; frames(2); nm[0]='w';nm[1]='a';nm[2]='r';nm[3]=(char)('0'+j);nm[4]=0; ppm(nm); }
+          boss_lv = lv0; boss_in_t0 = 0; }
+        { uint32_t lv0 = boss_lv, j; static const uint32_t LV[5] = {4, 8, 3, 5, 7}; static const char *const NM[5] = {"gob-axe", "gob-archer", "slime-blue", "slime-grey", "slime-small"};
+          for (j = 0; j < 5u; j++) { boss_lv = LV[j]; fm1_ms += 7000u; ui.force = 1; frames(3); ppm(NM[j]); }
+          q_ult_art = 3; q_var[3] = 1; q_ult_art_t0 = fm1_ms | 1u; q_ult_art_open = 0; fm1_ms += 40u; frames(2); fm1_ms += 5000u; ui.force = 1; frames(2); ppm("ult-warrior"); q_ult_art = 255; q_ult_art_open = 0; q_var[3] = 0;
+          boss_lv = 4; fm1_ms += 1650u; ui.force = 1; frames(3); ppm("gob-axe-atk"); boss_lv = lv0; }
+        {   /* the ults: a full ring waits for the gap, one at a time, the first boss gives the mage half */
+            uint32_t k;
+            check(q_ult[0] >= 50u || q_boss1_seen, "ult: the first time at the boss the mage starts at half");
+            q_ult[0] = 100, q_ult_full[0] = fm1_ms | 1u; q_ult[2] = 100, q_ult_full[2] = (fm1_ms + 5) | 1u; q_ult_gate = 0;
+            fm1_ms += 40u; ui.force = 1; frames(3);
+            check(q_ult_hero == 0u && q_ult[0] == 0u && q_ult[2] == 100u, "ult: the first full hero goes, the other waits");
+            check(q_ult_art == 0u, "ult: the first ult of a hero in a loop shows its picture full screen");
+            fm1_ms += 250u; ui.force = 1; frames(2); ppm("ult-art");
+            fm1_ms += 400u; ui.force = 1; frames(2); ppm("ult-band");
+            q_ult_seen = 15u; fm1_in.notes = 1u; fm1_ms += 40u; frame(); fm1_in.notes = 0u; fm1_ms += 40u; frame();
+            check(q_ult_art == 0u, "ult: no button skips or cancels the animation, even when it has been seen");
+            for (k = 0; k < 140u && q_ult_art != 255u; k++) { fm1_ms += 100u; frame(); }
+            check(q_ult_art == 255u && fm1_ms - q_ult_art_t0 >= 10000u && fm1_ms - q_ult_art_t0 < 10300u, "ult: the animation plays its whole ten seconds");
+            fm1_ms += 400u; ui.force = 1; frames(2); ppm("boss-ult-a");
+            fm1_ms += 900u; ui.force = 1; frames(2); ppm("boss-ult-b");
+            for (k = 0; k < 40u; k++) { fm1_ms += 100u; frame(); if (q_ult_hero == 255u) break; }
+            check(q_ult_hero == 255u && (int32_t)(q_ult_gate - fm1_ms) > 0 && (int32_t)(q_ult_gate - fm1_ms) <= 1500, "ult: after it a gap of 1.5 s before the next");
+            fm1_ms += 1600u; ui.force = 1; frames(3);
+            check(q_ult_hero == 2u, "ult: then the next full hero goes");
+            check(q_ult_art == 2u, "ult: every ult plays its animation, not only the first");
+            for (k = 0; k < 40u; k++) { fm1_ms += 100u; frame(); }
+            ui.force = 1; frame();
+        }
+        tap(B_HOME); check(q_town == 0, "HOME tapped again: back to the village");
+        tap(B_HOME); tap(B_HOME); tap(B_HOME); check(q_town == 0, "HOME x3: round the three homes and back to the village");
+        {   /* the boss takes damage from the loop and never dies fast */
+            uint32_t f, hp0, hits = 0;
+            for (f = 0; f < 3u; f++) { uint32_t s0; for (s0 = 0; s0 < 16u; s0 += 2u) { trk[f].step[s0].time = ST_NOTE; trk[f].step[s0].n = 1; trk[f].step[s0].note[0] = (uint8_t)(60 + f * 3u); trk[f].step[s0].vel = 100; } }
+            for (f = 0; f < 16u; f += 2u) TDRUM->dstep[f].on[0] = 1;
+            q_town = 2; boss_hp = boss_max(); hp0 = boss_hp; song.playing = 1; ui.force = 1;
+            for (f = 0; f < 600u; f++) { ui.force = 1; frame(); }
+            for (f = 0; f < 4u; f++) hits += qh_ms[f] != 0u;
+            check(hits > 0 && boss_hp < hp0, "boss: the loop's notes take HP off him");
+            check(boss_hp > hp0 / 2 || boss_lv > 1, "boss: ten seconds of a loop do not kill him");
+            ppm("home-boss2");
+            song.playing = 0;
+        }
+        {   /* the player's own hits: keys in a rhythm make a combo and a bigger hit; the combo goes after 4 s */
+            uint32_t k, hp0, n0;
+            q_town = 2; ui.force = 1; song.playing = 0; boss_hp = boss_max(); cb_n = 0; cb_last = 0; cb_ref = 0;
+            for (k = 0; k < 4u; k++) frame();
+            hp0 = boss_hp;
+            for (k = 0; k < 30u; k++) {
+                fm1_in.notes = 1u << (k % 5u); frames(1);
+                fm1_in.notes = 0; frames(14);                                      /* the same interval each time */
+            }
+            n0 = cb_n;
+            check(n0 >= 20u && boss_hp < hp0, "combo: keys at an even pace build the combo and hurt the boss");
+            ui.force = 1; frame(); ppm("home-boss-combo");
+            fm1_ms += 4500u; frames(2);
+            check(cb_n == 0u, "combo: 4 s without a key and it is gone");
+            boss_hp = boss_max();
+        }
+        q_town = 0; ui.force = 1; frame();
+    }
     open_family(FAM_ENV); ui.force = 1; ui.hot_col = 1; ui.hot_t = 30; frame(); ppm("page-env");
     open_family(FAM_EDIT); ui.force = 1; frame(); ppm("page-edit");
     open_family(FAM_FX); ui.force = 1; frame(); ppm("page-fx");
@@ -247,11 +618,11 @@ int main(int argc, char **argv)
     release(B_SCL);
     press(B_GLO); frames(10);
     key(0); check(trk[0].p[P_MUTE] == 1, "GLO + key 1: track 1 muted");
-    key(9); check(song.solo == 2u, "GLO + key 6: track 2 soloed");
+    key(9); check(!song.solo, "GLO + key 6: no solo any more");
     ppm("layer-mix");
     for (i = 0; i < 4u; i++) { fm1_in.notes = 1u << 26; frame(); fm1_in.notes = 0; frames(36); }   /* ~0.6 s apart */
     check(song.g[G_BPM] >= 95 && song.g[G_BPM] <= 105, "GLO + the last key, tapped at ~0.6 s: ~100 BPM");
-    key(0); key(9);
+    key(0);
     check(!trk[0].p[P_MUTE] && !song.solo, "again: unmuted, no solo");
     release(B_GLO);
     trk[0].p[P_CHORD] = 0;
@@ -261,6 +632,7 @@ int main(int argc, char **argv)
     song.playing = 0; song.rec = 0; rec_wait = 0;
     tap(B_REC); check(rec_wait == 1, "REC tapped (stopped): armed");
     ui.force = 1; frame(); ppm("live-rec-ready");
+    { uint32_t j; uint8_t r0 = song.rec; song.rec = 1; for (j = 0; j < 4u; j++) { fm1_ms += 140u; q_rec_screen(); fm1_ms += 200u; q_rec_screen(); char nm[16]; nm[0]='r';nm[1]='f';nm[2]=(char)('0'+j);nm[3]=0; ppm(nm); } song.rec = r0; }
     tap(B_REC); check(rec_wait == 0, "REC again: cancelled");
     trk[0].step[3].n = 1, trk[0].step[3].note[0] = 60, trk[0].step[3].time = ST_NOTE;
     press(B_REC); frames(50);                         /* 0.8 s: the ring */
@@ -369,98 +741,14 @@ int main(int argc, char **argv)
     for (i = 0; i < DRUM_KITS; i++) { TDRUM->p[P_E0] = (int16_t)i; ui.force = 1; drum_page = 1; frame(); }
     drum_page = 0;
 
-    {   /* menu NOTES (PR #11 by @renebohne): sounding synth voices light their keys */
+    {   /* menu USB AUDIO (the NOTES / LIGHTS / KEYS rows are gone) */
         song.sel = 0; go_home(); ui.force = 1; frame();
-        trk[0].p[P_CHORD] = 0; trk[0].p[P_QUANT] = 0; trk[0].p[P_ROOT] = 0; trk[0].p[P_TRANS] = 0;
-        song.octave = 0;
-        lights_notes = 0;
-        trk[0].v[0].active = 1; trk[0].v[0].gate = 1; trk[0].v[0].stage = 1; trk[0].v[0].note = 60;
-        frame();
-        check((keys_lit() & (1u << 7)) == 0, "NOTES off: a sounding synth voice lights no key");
-        ui.menu = 1; ui.menu_sel = MI_NOTES; ui.force = 1; frame();
-        encs[panel.enc[EN_K1]] = 1; frame();
-        check(lights_notes == 1u, "menu NOTES: KNOB 1 right: ON");
-        ui.force = 1; frame(); ppm("page-menu-notes");
-        ui.menu = 0; ui.force = 1; go_home(); frame();
-        check((keys_lit() & (1u << 7)) != 0, "NOTES on: a sounding synth voice lights key 7 (C4)");
-        {   /* every screen and layer: lit where the keys are notes, a glow under the tiles */
-            static const struct { uint32_t ly; int lit; const char *name; } L[] = {
-                {LY_ERASE, 1, "EDIT erase"}, {LY_ROLL, 1, "ARP roll"}, {LY_SCALE, 1, "SCL key"}, {LY_SONG, 1, "SAVE song"},
-                {LY_FX, 0, "FX punch"}, {LY_STEP, 0, "SEQ steps"}, {LY_MIX, 0, "GLO mix"}};
-            uint32_t k, ok = 1, ly0 = ui.layer;
-            char what[96];
-            for (k = 0; k < sizeof L / sizeof L[0]; k++) {
-                ui.layer = (uint8_t)L[k].ly;
-                if (L[k].lit)
-                    ok = (keys_lit() >> 7 & 1u) != 0;
-                else
-                    ok = (keys_notes_dim() >> 7 & 1u) != 0 && (keys_lit() >> 7 & 1u) == 0;
-                snprintf(what, sizeof what, "NOTES on, %s layer: the sounding C4 %s", L[k].name, L[k].lit ? "lit" : "glows under the tiles");
-                check(ok, what);
-            }
-            ui.layer = LY_SCALE;
-            check((keys_notes_dim() & scale_keys(0)) == scale_keys(0), "NOTES on, SCL: the scale glows");
-            lights_notes = 0;
-            ui.layer = LY_ERASE;
-            check((keys_lit() >> 7 & 1u) == 0 && keys_notes_dim() == 0u, "NOTES off, EDIT erase: as before (no note lights)");
-            ui.layer = LY_SCALE;
-            check(keys_notes_dim() == 0u, "NOTES off, SCL: as before");
-            lights_notes = 1;
-            ui.layer = (uint8_t)ly0;
-        }
-        song.octave = -1;
-        frame();
-        check((keys_lit() & (1u << 19)) != 0 && (keys_lit() & (1u << 7)) == 0, "NOTES on: the octave moves the lit key");
-        song.octave = 0;
-        trk[0].v[0].gate = 0; trk[0].v[0].stage = 3;
-        frame();
-        check((keys_lit() & (1u << 7)) == 0, "NOTES on: the release turns the key off");
-        trk[0].v[0].active = 0;
-        check((lights_word() >> 8 & 1u) == 1u, "NOTES: saved with the light settings");
         ui.menu = 1; ui.menu_sel = MI_USB; ui.force = 1; frame(); ppm("menu-usb");
         usb_full = 0;
         encs[panel.enc[EN_K1]] = 1; frame();
         check(usb_full == 1u && (lights_word() >> 11 & 1u) == 1u, "menu USB AUDIO: KNOB 1 -> FULL, saved with the settings");
         tap(B_OCTUP);
         check(usb_full == 0u && ui.menu == 1, "menu USB AUDIO: OCT+ toggles back to MASTER");
-        ui.menu = 0; ui.force = 1; go_home(); frame();
-        ui.menu = 1; ui.menu_sel = MI_NOTES; ui.force = 1; frame();
-        tap(B_OCTUP);
-        check(lights_notes == 0u && ui.menu == 1, "menu NOTES: OCT+ toggles it off");
-        ui.menu = 0; ui.force = 1; go_home(); frame();
-    }
-
-    {   /* menu LIGHTS / KEYS: the backlight for playing in the dark */
-        uint32_t m, nbits;
-        go_home(); ui.force = 1; frame();
-        check(lights_lvl == LIGHTS_OFF && fm1_led_bg_ns == 0u && lights_keys_mask() == 0u, "LIGHTS: off by default");
-        ui.menu = 1; ui.menu_sel = MI_LIGHTS; ui.force = 1; frame();
-        encs[panel.enc[EN_K1]] = 1; frame();
-        check(lights_lvl == LIGHTS_LOW && fm1_led_bg_ns == 500u, "LIGHTS: KNOB 1 right: LOW (a 0.5 us pulse a frame)");
-        encs[panel.enc[EN_K1]] = 1; frame();
-        check(lights_lvl == LIGHTS_MID && fm1_led_bg_ns == 1000u, "LIGHTS: MID (1 us)");
-        encs[panel.enc[EN_K1]] = 1; frame(); encs[panel.enc[EN_K1]] = 1; frame();
-        check(lights_lvl == LIGHTS_HIGH && fm1_led_bg_ns == 2000u, "LIGHTS: HIGH (2 us, under the 4 us glow), and it stops there");
-        ui.force = 1; frame(); ppm("page-menu-lights");
-        encs[panel.enc[EN_K1]] = -1; frame();
-        check(lights_lvl == LIGHTS_MID, "LIGHTS: KNOB 1 left: dimmer");
-        tap(B_OCTUP);
-        check(lights_lvl == LIGHTS_HIGH && ui.menu == 1, "LIGHTS: OCT+ steps round, the menu stays");
-        tap(B_OCTUP);
-        check(lights_lvl == LIGHTS_OFF && fm1_led_bg_ns == 0u, "LIGHTS: ... back to OFF");
-        ui.menu_sel = MI_KEYS; ui.force = 1; frame();
-        encs[panel.enc[EN_K1]] = 1; frame();
-        m = lights_keys_mask();
-        check(lights_keys == KEYS_C && lights_lvl == LIGHTS_LOW && m == (1u << 7 | 1u << 19),
-              "KEYS: C KEYS (C4, C5), LIGHTS raised to LOW");
-        encs[panel.enc[EN_K1]] = 1; frame(); encs[panel.enc[EN_K1]] = 1; frame();
-        for (m = lights_keys_mask(), nbits = 0; m; m &= m - 1u)
-            nbits++;
-        check(lights_keys == KEYS_WHITE && nbits == 16u && !(lights_keys_mask() & (1u << 1)),
-              "KEYS: WHITE KEYS (16 of 27, F#3 dark), and it stops there");
-        lights_lvl = LIGHTS_OFF; frame();
-        check(lights_keys_mask() == 0u && fm1_led_bg_ns == 0u, "KEYS: nothing lit while LIGHTS is OFF");
-        lights_keys = KEYS_OFF;
         ui.menu = 0; ui.force = 1; go_home(); frame();
     }
 

@@ -1,7 +1,7 @@
 name: build-firmware
 # Builds the installable package (build/felucca.fwsc) with JieLi's Linux toolchain, runs the host tests and, on main, publishes
 #   - the package as a GitHub release (download it, or use the installer below), and
-#   - a Pages site: the browser installer + editor (web/make_site.py) and the browser emulator (quest/web).
+#   - a Pages site: the page (page/build_page.py: installer, change log, 3D model running the real firmware) and the web editor (web/make_site.py).
 # For Pages: Settings > Pages > Source: "GitHub Actions" (no branch needed).
 on:
   push:
@@ -63,12 +63,13 @@ jobs:
         with:
           name: fm1-quest-firmware
           path: build/felucca.fwsc
-      - name: Browser emulator (wasm)
+      - name: The real firmware in WebAssembly (the page's 3D model runs it)
         run: cd quest && CC=zig sh ./build.sh
-      - name: Site (installer + editor + emulator)
+      - name: Site (the page: installer, change log and the 3D model; the editor)
         run: |
-          python3 web/make_site.py build/felucca.fwsc ${{ github.run_number }} site
-          mkdir -p site/emulator && cp -R quest/web/. site/emulator/
+          VER=$(grep -o 'FELUCCA_VERSION[^"]*"[^"]*"' firmware/src/ui.c | head -1 | cut -d'"' -f2)
+          python3 web/make_site.py build/felucca.fwsc "${VER:-dev}" site
+          python3 page/build_page.py site build/felucca.fwsc "${VER:-dev}"
       - name: Release (main only)
         if: github.ref == 'refs/heads/main'
         env: { GH_TOKEN: '${{ github.token }}' }

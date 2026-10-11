@@ -456,6 +456,7 @@ static void persist_boot(void)                    /* before settings_init / pane
         uint32_t k;
         for (k = 0; k < SMP_USER_SLOTS; k++)
             smp_user_scan(k);
+        sng_scan_all();
     }
     {
         int n = st_load(OBJ_SETTINGS, &p, sizeof p);
@@ -572,7 +573,7 @@ static uint32_t settings_restore(const void *raw, uint32_t n)
         return 2;
     memset(&p, 0, sizeof p);
     memcpy(&p, raw, n);
-    if (p.magic != PERSIST_MAGIC || p.palette >= NPALETTES || p.lowcut > 1u || p.zoom > 1u || !panel_valid(&p.panel))
+    if (p.magic != PERSIST_MAGIC || p.palette >= NPALETTES || p.lowcut > 1u || p.zoom > 0x7Fu || !panel_valid(&p.panel))
         return 2;
 #if FELUCCA_ARRANGER
     if (!arr_valid(&p.arrangement, 15u))

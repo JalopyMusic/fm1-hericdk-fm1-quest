@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
 """FM1 Quest title screen (README: TITLE): assets/quest/title-bg-240.png (the design's illustration, reduced to 240x240) quantized to
-the 16-colour scene palette with a 4x4 ordered dither at 120 x 120, packed 4 bits per pixel (7.2 KB, drawn doubled); assets/quest/logo-340.png (white
+the 16-colour scene palette with a 4x4 ordered dither at 120 x 120, packed 2 bits per pixel in the 4 best colours of that palette (3.6 KB, drawn doubled); assets/quest/logo-340.png (white
 "FM1 QUEST", transparent) reduced to ~170 px wide as a 1-bit mask (the screen draws it cream with a dark outline).
 tools/gen_quest_title.py build/gen/felucca_qtitle.h"""
 import sys
@@ -14,13 +14,15 @@ BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5]
 BG = 120                                     # the art is kept at 120 x 120 (7.2 KB) and drawn doubled: flash space (the app has ~560 KiB)
 bg = Image.open(A / "title-bg-240.png").convert("RGB").resize((BG, BG), Image.LANCZOS)
 px = bg.load()
+# 4 bits a pixel: the whole 16-colour scene palette, a 4x4 ordered dither (the opening is in colour again: 7.2 KB)
+pix = [px[x, y] for y in range(BG) for x in range(BG)]
 idx = []
 for y in range(BG):
     for x in range(BG):
-        th = (BAYER[(y % 4) * 4 + x % 4] / 16 - 0.5) * 28
-        r, g, b = (px[x, y][i] + th for i in range(3))
-        best = min(range(16), key=lambda k: (r - PAL[k][0]) ** 2 * .3 + (g - PAL[k][1]) ** 2 * .59 + (b - PAL[k][2]) ** 2 * .11)
-        idx.append(best)
+        th = (BAYER[(y % 4) * 4 + x % 4] / 16 - 0.5) * 36
+        c = px[x, y]
+        r, g, b = (c[i] + th for i in range(3))
+        idx.append(min(range(16), key=lambda j: (r - PAL[j][0]) ** 2 * .3 + (g - PAL[j][1]) ** 2 * .59 + (b - PAL[j][2]) ** 2 * .11))
 packed = [(idx[i] << 4) | idx[i + 1] for i in range(0, len(idx), 2)]
 logo = Image.open(A / "logo-340.png").convert("RGBA")
 lw = 170

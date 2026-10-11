@@ -6,7 +6,7 @@
  * and relighting would let the 10 kHz scan catch the dark gap and flicker. */
 static uint8_t led_pos[41];                        /* (col << 3) | row bit, 0xFF = none */
 
-static void led_pos_init(void)
+static UI_NOINLINE void led_pos_init(void)
 {
     uint32_t id, p, r;
     for (id = 0; id < 41u; id++) {
@@ -18,7 +18,7 @@ static void led_pos_init(void)
     }
 }
 
-static void led_put(uint8_t *nl, uint32_t id, int on)
+static UI_NOINLINE void led_put(uint8_t *nl, uint32_t id, int on)
 {
     uint8_t q = led_pos[id];
     if (q != 0xFF && on)
@@ -28,8 +28,8 @@ static void led_put(uint8_t *nl, uint32_t id, int on)
 static const uint8_t FAM_BTN[FAM_COUNT] = {B_HOME, B_ENV, B_LFO, B_FX, B_SCL, B_EDIT, B_GLO, B_SAVE,
                                            B_ARP, B_SEQ, B_HOME};   /* button of each page family (TRACKS: HOME) */
 
-static uint32_t cur_fam(void) { return ui.home ? FAM_HOME : cur_page()->fam; }
-static uint32_t cur_btn(void)                      /* the button of the screen shown */
+static UI_NOINLINE uint32_t cur_fam(void) { return ui.home ? FAM_HOME : cur_page()->fam; }
+static UI_NOINLINE uint32_t cur_btn(void)                      /* the button of the screen shown */
 {
     if (!ui.home && cur_page()->scope == SC_SONG)
         return B_SAVE;
@@ -39,7 +39,7 @@ static uint32_t cur_btn(void)                      /* the button of the screen s
 }
 
 /* PLAY flashes on every beat, as heard (the sound leaves ~9 ms after it is rendered) */
-static int play_led(void)
+static UI_NOINLINE int play_led(void)
 {
     uint32_t p = clk_pos, lat = HALF_FRAMES * 3u / 2u * (uint32_t)song.g[G_BPM];
     if (!song.playing)
@@ -52,7 +52,7 @@ static int play_led(void)
 /* what sounds on track t, as keys: the drum hits (each lights its key a few frames) or, on a synth
  * track, the voices still held, mapped back through the keyboard (octave, scale, chords; by
  * @renebohne, PR #11). Shown at once with menu NOTES on, on every screen and layer (keys_notes_dim) */
-static uint32_t keys_sounding(const track_t *t)
+static UI_NOINLINE uint32_t keys_sounding(const track_t *t)
 {
     uint32_t i, m = 0;
     if (is_drum(t)) {
@@ -73,7 +73,7 @@ static uint32_t keys_sounding(const track_t *t)
     return m;
 }
 
-static uint32_t scale_keys(uint32_t root_only)   /* SCL: the keys in the scale (or its roots only) */
+static UI_NOINLINE uint32_t scale_keys(uint32_t root_only)   /* SCL: the keys in the scale (or its roots only) */
 {
     uint32_t i, m = 0, root = (uint32_t)trk[0].p[P_ROOT] % 12u, mask = SCALE_MASK[clamp(trk[0].p[P_SCALE], 0, NSCALES - 1)];
     for (i = 0; i < 27u; i++) {
@@ -84,7 +84,7 @@ static uint32_t scale_keys(uint32_t root_only)   /* SCL: the keys in the scale (
     return m;
 }
 
-static uint32_t erase_lanes(const track_t *t)   /* EDIT erase, drum track: the sounds the pattern holds */
+static UI_NOINLINE uint32_t erase_lanes(const track_t *t)   /* EDIT erase, drum track: the sounds the pattern holds */
 {
     uint32_t i, m = 0;
     if (is_drum(t))
@@ -97,7 +97,7 @@ static uint32_t erase_lanes(const track_t *t)   /* EDIT erase, drum track: the s
     return m;
 }
 
-static uint32_t keys_lit(void)
+static UI_NOINLINE uint32_t keys_lit(void)
 {
     uint32_t m = 0, i, blink = (fm1_ms / 125u) & 1u;
     track_t *t = TSEL;
@@ -126,8 +126,6 @@ static uint32_t keys_lit(void)
         for (i = 0; i < 4u; i++) {
             if (!trk_silent(&trk[i]))
                 m |= 1u << key_of_white(i);
-            if ((song.solo >> i) & 1u)
-                m |= 1u << key_of_white(4u + i);
         }
         if (play_led())
             m |= 1u << key_of_white(15);
@@ -146,7 +144,7 @@ static uint32_t keys_lit(void)
 /* menu NOTES, on the layers whose keys are tiles (FX effects, SEQ steps, GLO mute / solo): what
  * sounds glows dimly under the tiles, which keep their full light. SCL (the scale) and EDIT on the
  * drum track (the sounds of the pattern): those glow, and what sounds is lit (keys_lit) */
-static uint32_t keys_notes_dim(void)
+static UI_NOINLINE uint32_t keys_notes_dim(void)
 {
     if (!lights_notes)
         return 0u;
@@ -166,7 +164,7 @@ static uint32_t keys_notes_dim(void)
 
 /* the keys' landmarks, dim: the first key of each row of the 4 x 4 grid on screen (white keys
  * 1, 5, 9, 13) while a layer is held, and on the drum track (its 16 sounds, 4 x 4 as on KIT) */
-static uint32_t keys_guide(void)
+static UI_NOINLINE uint32_t keys_guide(void)
 {
     if (ui.layer == LY_PLAY && !is_drum(TSEL))
         return 0u;
@@ -174,7 +172,7 @@ static uint32_t keys_guide(void)
 }
 
 /* the keys the backlight lights (menu KEYS): the Cs, or every white key; bit k = key k (0 = F3) */
-static uint32_t lights_keys_mask(void)
+static UI_NOINLINE uint32_t lights_keys_mask(void)
 {
     uint32_t k, m = 0;
     if (!lights_lvl || !lights_keys)
@@ -187,10 +185,10 @@ static uint32_t lights_keys_mask(void)
     return m;
 }
 
-static void ui_leds(void)
+static UI_NOINLINE void ui_leds(void)
 {
     uint8_t nl[FM1_NCOL] = {0}, dl[FM1_NCOL] = {0}, bl[FM1_NCOL] = {0};
-    uint32_t k, c, keys, guide, back;
+    uint32_t k, c, keys, guide, back, back_tail;
     static uint8_t ready;
     if (!ready) {
         led_pos_init();
@@ -200,6 +198,24 @@ static void ui_leds(void)
             ly_lock == LY_PLAY || ((fm1_ms / 300u) & 1u) != 0u || (fm1_in.buttons & ly_bit[ly_lock % LY_COUNT]) != 0u);   /* locked: blinks */
     led_put(nl, panel.btn[B_PLAY], play_led() || (song.playing && !song.rec && ft_on) ||
                                       (ci_on && ci_u % BEAT_U < BEAT_U / 4u));   /* (the count-in's beats) */
+    {   /* the loop runs: a light hops FX .. GLO with every note the selected hero plays (the steps of its coloured bar); silent, a dim pulse on the beat; all of it fades */
+        static const uint8_t CHASE[6] = {B_FX, B_SCL, B_ENV, B_LFO, B_EDIT, B_GLO};
+        static uint32_t pt[6], seen, pbeat = 0xFFFFFFFFu;
+        static uint8_t cp, pst[6];
+        uint32_t h = song.sel % 4u, k, now = fm1_ms;
+        if (!song.playing || now < 4000u) {
+            if (now >= 4000u) for (k = 0; k < 6u; k++) pt[k] = 0, fm1_led_lv[panel.btn[CHASE[k]]] = 0;
+        } else {
+            if (qh_ms[h] && qh_ms[h] != seen) { seen = qh_ms[h]; cp = (uint8_t)((cp + 1u) % 6u); pt[cp] = now | 1u; pst[cp] = 1; }
+            else if (now - seen > 700u && clk_beat != pbeat) { pbeat = clk_beat; cp = (uint8_t)((cp + 1u) % 6u); pt[cp] = now | 1u; pst[cp] = 0; }
+            for (k = 0; k < 6u; k++) {
+                uint32_t age = now - pt[k], mx = pst[k] ? 16u : 3u;
+                fm1_led_lv[panel.btn[CHASE[k]]] = (uint8_t)(pt[k] && age < 320u ? 1u + mx * (320u - age) / 320u : 0u);
+            }
+        }
+    }
+    if (ui.menu == 7 && gm.ph == 1) led_put(nl, panel.btn[B_PLAY], 1), led_put(nl, panel.btn[B_SCL], 1);
+    if (ui.menu == 9) led_put(nl, panel.btn[B_SCL], 1);                         /* the sound select: SEL (copy) is lit */   /* the song select: PLAY and SEL are lit, either one starts the tape */
     led_put(nl, panel.btn[B_REC], song.rec != 0u || ft_on || (rec_wait && ((fm1_ms / 125u) & 1u)) ||
                                      (ui.hold_kind == 1u && ((fm1_ms / 60u) & 1u)));   /* blinks: armed; fast: clearing */
     if (is_drum(TSEL)) {                           /* the drum track: OCT- / OCT+ lit while ghost / hard */
@@ -209,8 +225,112 @@ static void ui_leds(void)
         led_put(nl, panel.btn[B_OCTDN], song.octave < 0);
         led_put(nl, panel.btn[B_OCTUP], song.octave > 0);
     }
-    keys = keys_lit();
-    guide = (keys_guide() | keys_notes_dim()) & ~keys;
+    keys = keys_lit() | (ui.menu == 7 && gm.ph == 2u ? gm_hint_mask() : 0u);                    /* in a game: the keys of the note to play are lit */
+    {   /* a key that was lit goes out softly (the fade knob sets how long), and the other effects of KEYBOARD LED play around it: the HAL's soft levels, on every layer and screen */
+        static uint32_t prev_keys, tail_ms[27], ev_t[6], hold_ev[27];
+        static uint8_t ev_k[6], ev_n;
+        uint32_t gone = prev_keys & ~keys, born = keys & ~prev_keys, now = fm1_ms, life = 150u + led_fd * 60u, step = 150u - led_sp * 8u, ev;
+        uint8_t fx[27] = {0};
+        if (led_demo_t0 && now - led_demo_t0 < 40u && ev_t[(ev_n + 5u) % 6u] != led_demo_t0) {   /* a knob was turned in the menu: one key press for the eye */
+            ev_t[ev_n % 6u] = led_demo_t0, ev_k[ev_n % 6u] = 13, ev_n++;
+        }
+        for (k = 0; k < 27u; k++)
+            if (((born >> k) & 1u) || (led_hold && ((keys >> k) & 1u) && now - hold_ev[k] >= 420u - led_sp * 18u)) {   /* a press, or a key still held (HOLD mode) goes on */
+                ev_t[ev_n % 6u] = now | 1u, ev_k[ev_n % 6u] = (uint8_t)k, ev_n++;
+                hold_ev[k] = now;
+            }
+        if (led_fx != 0u && led_fx != 3u)
+            for (ev = 0; ev < 6u; ev++) {
+                uint32_t age = now - ev_t[ev];
+                if (!ev_t[ev] || age > life + 27u * step + 200u) continue;
+                for (k = 0; k < 27u; k++) {
+                    int32_t d = (int32_t)k - (int32_t)ev_k[ev], lv = 0, t;
+                    uint32_t ad = (uint32_t)(d < 0 ? -d : d);
+                    switch (led_fx) {
+                    case 1:                                                            /* waves: a pulse runs out to both sides */
+                        t = (int32_t)age - (int32_t)(ad * step);
+                        if (t >= 0 && t < (int32_t)life) lv = t < (int32_t)life / 4 ? 16 * t * 4 / (int32_t)life : 16 * ((int32_t)life - t) * 4 / (3 * (int32_t)life);
+                        break;
+                    case 2:                                                            /* explosion: a small burst, a ring of three keys */
+                        if (ad <= 3u) {
+                            t = (int32_t)age - (int32_t)(ad * step / 3u);
+                            if (t >= 0 && t < (int32_t)life / 3) lv = 16 - 16 * t / ((int32_t)life / 3);
+                        }
+                        break;
+                    case 3:                                                            /* rain: drops come down on the diagonal for a few seconds, the press makes the first */
+                        break;
+                    case 4: {                                                          /* comet: a tail runs to the right end */
+                        int32_t h = (int32_t)(age / step) + (int32_t)ev_k[ev], q = h - (int32_t)k;
+                        if ((int32_t)k >= (int32_t)ev_k[ev] && q >= 0 && q < 5) lv = 16 - q * 3;
+                        break; }
+                    default: {                                                         /* fireworks: a rocket climbs to one side, bursts, the sparks twinkle and fall */
+                        uint32_t hh = qhash(ev_t[ev] * 5u + 3u);
+                        int32_t dir = (hh & 1u) ? 1 : -1, dist = 4 + (int32_t)((hh >> 1) % 6u), tgt = (int32_t)ev_k[ev] + dir * dist, rise = 200 + dist * 22, a = (int32_t)age;
+                        if (tgt < 1) tgt = (int32_t)ev_k[ev] + dist;
+                        if (tgt > 25) tgt = (int32_t)ev_k[ev] - dist;
+                        if (a < rise) {                                                /* the rocket */
+                            int32_t pos = (int32_t)ev_k[ev] + (tgt - (int32_t)ev_k[ev]) * a / rise, dd = (int32_t)k - pos;
+                            if (dd == 0) lv = 16; else if ((tgt > (int32_t)ev_k[ev] ? -dd : dd) == 1) lv = 6;
+                        } else {                                                       /* the burst: a ring grows, sparks flicker inside it, all fades over about a second */
+                            int32_t u = a - rise, r = u / 70, bd = (int32_t)k - tgt, bad = bd < 0 ? -bd : bd, fade = 1000 - u;
+                            if (r > 4) r = 4;
+                            if (fade > 0 && bad <= r) {
+                                lv = (bad == r ? 16 : 5 + (int32_t)(qhash((uint32_t)k * 13u + (uint32_t)(now / 55u)) & 7u)) * fade / 1000;
+                                if (bad == 0 && u < 120) lv = 16;
+                            }
+                        }
+                        break; }
+                    }
+                    if (lv > fx[k]) fx[k] = (uint8_t)(lv > 16 ? 16 : lv);
+                }
+            }
+        if (led_fx == 3u) {                                                                /* the rain: drops hit the keys one after another for 3.5 s after a press (all the time the key is held, in HOLD),
+                                                                                         * and every drop makes a puddle: a ring of water that spreads out and settles */
+            static uint32_t drop_t[10], rain_next, last_press, drop_n;
+            static uint8_t drop_k[10];
+            if (born || (led_hold && keys) || (led_demo_t0 && now - led_demo_t0 < 40u)) last_press = now | 1u;
+            if (last_press && now - last_press < 3500u && now >= rain_next) {
+                uint32_t h = qhash(now + drop_n * 31u), dk = h % 27u;
+                rain_next = now + 200u + h % 160u;
+                if (born) { for (k = 0; k < 27u; k++) if ((born >> k) & 1u) dk = k; }
+                drop_t[drop_n % 10u] = now | 1u, drop_k[drop_n % 10u] = (uint8_t)dk;
+                drop_n++;
+            }
+            for (ev = 0; ev < 10u; ev++) {
+                uint32_t age = now - drop_t[ev], dk = drop_k[ev], r = age / 95u;
+                int32_t j;
+                if (!drop_t[ev] || age > 1100u) continue;
+                for (j = -(int32_t)r; j <= (int32_t)r; j += 2 * (int32_t)r > 0 ? 2 * (int32_t)r : 1) {                  /* the ring: the two keys r away (the centre while r = 0) */
+                    int32_t kk = (int32_t)dk + j;
+                    uint32_t v = age < 95u ? 16u : (r < 5u ? 15u - r * 2u : 4u) * (1100u - age) / 1005u;
+                    if (kk >= 0 && kk < 27 && fx[kk] < v) fx[kk] = (uint8_t)v;
+                    if (r > 0u && kk - (j > 0 ? 1 : -1) >= 0 && kk - (j > 0 ? 1 : -1) < 27 && fx[kk - (j > 0 ? 1 : -1)] < v / 3u) fx[kk - (j > 0 ? 1 : -1)] = (uint8_t)(v / 3u);   /* its trailing edge */
+                }
+                if (age < 900u && fx[dk] < 6u) fx[dk] = (uint8_t)(6u * (900u - age) / 900u);                              /* the puddle stays where it fell */
+            }
+        }
+        {   /* the buttons above join in: each one takes the level of the key under it (the loop's chase keeps the larger) */
+            static const uint8_t CH[6] = {B_FX, B_SCL, B_ENV, B_LFO, B_EDIT, B_GLO};
+            uint32_t bn, cm = 0;
+            for (bn = 0; bn < 6u; bn++) cm |= 1u << panel.btn[CH[bn]];                   /* the loop's chase owns these six: the larger of the two */
+            for (bn = 0; bn < 14u; bn++) {
+                uint32_t v = fx[bn * 2u];
+                if ((cm >> bn) & 1u) { if (v > fm1_led_lv[bn]) fm1_led_lv[bn] = (uint8_t)v; }
+                else fm1_led_lv[bn] = (uint8_t)v;                                           /* (and it falls back to dark with the effect) */
+            }
+        }
+        for (k = 0; k < 27u; k++) {
+            uint32_t e = now - tail_ms[k], tl = 0u;
+            if ((gone >> k) & 1u)
+                tail_ms[k] = now, e = 0;
+            if (!((keys >> k) & 1u) && tail_ms[k] && e < life)
+                tl = 1u + (life - e) * (life - e) * 15u / (life * life);
+            fm1_led_lv[14u + k] = (uint8_t)(tl > fx[k] ? tl : fx[k]);
+        }
+        prev_keys = keys;
+        back_tail = 0;
+    }
+    guide = (keys_guide() | keys_notes_dim() | back_tail | (ui.menu == 7 && gm.ph == 2u ? gm_guide_mask() : 0u)) & ~keys;
     back = lights_keys_mask() & ~keys & ~guide;
     for (k = 0; k < 27u; k++) {
         led_put(nl, 14u + k, (int)((keys >> k) & 1u));
@@ -229,7 +349,7 @@ static void ui_leds(void)
 }
 
 /* ---------------------------------------------------------- input --- */
-static int32_t accel(uint32_t role, int32_t s, int32_t range)
+static UI_NOINLINE int32_t accel(uint32_t role, int32_t s, int32_t range)
 {
     uint32_t now = fm1_ticks(), dt = now - ui.enc_t[role];
     ui.enc_t[role] = now;
@@ -241,7 +361,7 @@ static int32_t accel(uint32_t role, int32_t s, int32_t range)
 /* TRACKS page: KNOB 1 SWING (the groove of every track, MPC 50..75 %), 2 LEVEL (0 = mute; the drum
  * track: GLO > DRUMS LEVEL), 3 LEN of its pattern, 4 PAN. A track muted with MUTE (GLO + key, the
  * editor): the first turn of KNOB 2 unmutes it */
-static void tracks_edit(uint32_t slot, int32_t steps)
+static UI_NOINLINE void tracks_edit(uint32_t slot, int32_t steps)
 {
     track_t *t = TSEL;
     int16_t *vp;
@@ -271,7 +391,7 @@ static void tracks_edit(uint32_t slot, int32_t steps)
     *vp = (int16_t)clamp(*vp + accel(EN_K1 + slot, steps, d->max - d->min), d->min, d->max);
 }
 
-static void step_edit(uint32_t slot, int32_t steps)
+static UI_NOINLINE void step_edit(uint32_t slot, int32_t steps)
 {
     step_t *st = &TSEL->step[ui.cursor];
     uint32_t i;
@@ -306,7 +426,7 @@ static void step_edit(uint32_t slot, int32_t steps)
 }
 
 /* a new project: every track empty, the default sounds, 90 BPM (TOOLS > NEW) */
-static void project_new(void)
+static UI_NOINLINE void project_new(void)
 {
     uint32_t i;
     transport_req = 2;
@@ -332,7 +452,7 @@ static void project_new(void)
     ui.force = 1;
 }
 
-static void edit_param(uint32_t slot, int32_t steps)
+static UI_NOINLINE void edit_param(uint32_t slot, int32_t steps)
 {
     int16_t *vp;
     const page_t *pg = cur_page();
@@ -438,7 +558,7 @@ static void edit_param(uint32_t slot, int32_t steps)
 /* SEQ step entry, acid style: the keys pressed together (POLY: up to 4, MONO:
  * the last one) become the cursor step; releasing all keys moves on. Not while recording or armed:
  * the keys record live then (they would be written twice) */
-static void seq_entry(uint32_t pressed)
+static UI_NOINLINE void seq_entry(uint32_t pressed)
 {
     track_t *t = TSEL;
     step_t *st = &t->step[ui.cursor];
@@ -474,7 +594,7 @@ static void seq_entry(uint32_t pressed)
 /* HOME: tap on release, hold 0.7 s fires once. t0 = press time | 1,
  * bit 1 = fired (or swallowed: then the release is no tap either) */
 enum { BT_NONE, BT_TAP, BT_HOLD };
-static uint32_t btn_hold(uint32_t *t0, uint32_t label, uint32_t now, int hold_ok)
+static UI_NOINLINE uint32_t btn_hold(uint32_t *t0, uint32_t label, uint32_t now, int hold_ok)
 {
     uint32_t tap;
     if ((fm1_in.buttons >> panel.btn[label]) & 1u) {
@@ -492,7 +612,7 @@ static uint32_t btn_hold(uint32_t *t0, uint32_t label, uint32_t now, int hold_ok
 }
 
 /* a layer button tapped (pressed and let go, nothing touched): its pages, as before the layers */
-static void layer_tap(uint32_t layer)
+static UI_NOINLINE void layer_tap(uint32_t layer)
 {
     switch (layer) {
     case LY_FX:
@@ -546,7 +666,7 @@ static void layer_tap(uint32_t layer)
  * hands free for the keys and the knobs); any other button but PLAY, REC and OCT- / OCT+ lets it go
  * (and does only that: its press is eaten) */
 static uint8_t home_eat;                                  /* HOME pressed to unlock: its tap is eaten */
-static void layer_unlock(void)
+static UI_NOINLINE void layer_unlock(void)
 {
     if (ly_lock != LY_PLAY) {
         ly_lock = LY_PLAY;
@@ -556,7 +676,7 @@ static void layer_unlock(void)
 
 /* the layers, once a frame: which one is held (or locked), the taps on release, its keys and knobs.
  * Returns 1 while one is held or locked (the page does not take the knobs then) */
-static int layers_input(uint32_t note_edges, uint32_t *pressed, uint32_t home)
+static UI_NOINLINE int layers_input(uint32_t note_edges, uint32_t *pressed, uint32_t home)
 {
     static uint8_t down[LY_COUNT], used[LY_COUNT];
     static uint32_t t0[LY_COUNT];
@@ -657,7 +777,7 @@ static int layers_input(uint32_t note_edges, uint32_t *pressed, uint32_t home)
 /* the REC screen while armed (ui_studio.c rec_screen_draw): KNOB 1 MODE free / tempo (an empty
  * project), KNOB 2 the length of the selected track (1, 2 or 4 bars), KNOB 3 START note / count;
  * MODE and START are settings of the FM-1 (panel.c lights_word: saved once stopped) */
-static void rec_knobs(void)
+static UI_NOINLINE void rec_knobs(void)
 {
     static const uint8_t LENS[3] = {16u, 32u, 64u};
     int32_t s;
@@ -689,7 +809,7 @@ static void rec_knobs(void)
 /* REC: acts on the press (no lag). Held 0.7 s the press is undone and a ring fills: held on to the
  * end, the selected track is cleared (EDIT + OCT- brings it back); let go before, nothing happens.
  * (SAVE is the SONG layer: ui_layers.c; tapped, layer_tap) */
-static void holds_input(uint32_t pressed, uint32_t now_ms)
+static UI_NOINLINE void holds_input(uint32_t pressed, uint32_t now_ms)
 {
     static uint8_t prev_rec, prev_wait, eaten, rec_on, save_on;   /* *_on: pressed, *_t0 its time */
     static uint32_t rec_t0, save_t0;
@@ -697,6 +817,20 @@ static void holds_input(uint32_t pressed, uint32_t now_ms)
     uint32_t rec_down = (fm1_in.buttons & rb) != 0u, save_down = (fm1_in.buttons & sb) != 0u;
     if (on_song_page())
         rec_down = 0, pressed &= ~rb;                     /* (the song page: REC stores a section) */
+    {   /* OCT- + OCT+ held for 0.8 s: the selected hero's effects back to its sound's own; the cleric lights it */
+        static uint32_t ob_t0;
+        uint32_t both = (1u << panel.btn[B_OCTDN]) | (1u << panel.btn[B_OCTUP]);
+        if ((fm1_in.buttons & both) == both && !is_drum(TSEL)) {
+            if (!ob_t0)
+                ob_t0 = now_ms | 2u;
+            else if (ob_t0 != 1u && now_ms - ob_t0 >= 800u) {
+                fx_reset(song.sel);
+                ui_message("FX RESET");
+                ob_t0 = 1u;
+            }
+        } else
+            ob_t0 = 0u;
+    }
     /* REC */
     if (pressed & rb) {
         eaten = (uint8_t)ft_owns_press();                 /* (the press closed a free take: seq.c) */
@@ -740,15 +874,74 @@ static void holds_input(uint32_t pressed, uint32_t now_ms)
     (void)sb, (void)save_down, (void)save_on, (void)save_t0;   /* (SAVE is a layer now: ui_layers.c) */
 }
 
-static void ui_input(void)
+static int16_t gm_lvl_save = -1;                                                  /* the level the hero had before the games menu raised it */
+static uint8_t gm_lvl_trk;
+static int16_t gm_mute_save = -1;                                                 /* (and a muted hero is unmuted for the same time) */
+static uint8_t gm_mute_trk;
+static UI_NOINLINE void gm_level_hold(void)                                       /* in the games menu and the sound select the sound must be heard: the level is raised, and put back on leaving */
+{
+    uint32_t active = (ui.menu == 7 && gm.ph >= 1u) || ui.menu == 9;
+    game_hold = (uint8_t)(ui.menu == 7 && gm.ph == 2u);
+    int16_t *vp;
+    if (gm_lvl_save >= 0 && (!active || gm_lvl_trk != song.sel)) {                /* leaving, or another hero picked: the level back where it was */
+        vp = is_drum(&trk[gm_lvl_trk % NTRK]) ? &song.g[G_DRLVL] : &trk[gm_lvl_trk % NTRK].p[P_LEVEL];
+        *vp = gm_lvl_save;
+        gm_lvl_save = -1;
+    }
+    if (gm_mute_save >= 0 && (ui.menu != 9 || gm_mute_trk != song.sel)) {
+        trk[gm_mute_trk % NTRK].p[P_MUTE] = gm_mute_save;
+        gm_mute_save = -1;
+    }
+    if (ui.menu == 9 && gm_mute_save < 0) gm_mute_trk = song.sel, gm_mute_save = trk[song.sel % NTRK].p[P_MUTE];
+    if (ui.menu == 9) trk[song.sel % NTRK].p[P_MUTE] = 0;
+    if (active) {
+        int16_t want;
+        if (gm_lvl_save < 0) {
+            gm_lvl_trk = song.sel;
+            vp = is_drum(&trk[gm_lvl_trk % NTRK]) ? &song.g[G_DRLVL] : &trk[gm_lvl_trk % NTRK].p[P_LEVEL];
+            gm_lvl_save = *vp;
+        }
+        want = is_drum(&trk[gm_lvl_trk % NTRK]) ? GP[G_DRLVL].def : TP[P_LEVEL].def;
+        vp = is_drum(&trk[gm_lvl_trk % NTRK]) ? &song.g[G_DRLVL] : &trk[gm_lvl_trk % NTRK].p[P_LEVEL];
+        if (*vp < want) *vp = want;
+    }
+}
+static UI_NOINLINE void ui_input(void)
 {
     uint32_t pressed = fm1_input_edges(0), notes = fm1_input_note_edges(), now = fm1_ticks(), id, b, k;
     uint32_t home = btn_hold(&ui.home_t0, B_HOME, now, 1);
     int32_t s;
     int layered;
+    {   /* hold PLAY (0.7 s): the sound select. The press had already toggled the transport: a loop that was not playing is stopped again */
+        static uint32_t play_t0;
+        static uint8_t play_was, play_fired;
+        uint32_t pb = 1u << panel.btn[B_PLAY];
+        static uint8_t play_defer;                      /* the press waits: a short press plays / pauses when it is let go, a hold of 0.7 s opens the sound select and plays nothing */
+        if ((pressed & pb) && !ui.menu && ui.layer == LY_PLAY && !ft_on && !rec_wait && !ci_on) {
+            pressed &= ~pb;
+            play_t0 = fm1_ms | 1u, play_fired = 0, play_defer = 1;
+        } else if (pressed & pb) play_t0 = 0, play_defer = 0;
+        play_was = song.playing;
+        if (play_defer && !play_fired && (fm1_in.buttons & pb) && (int32_t)(fm1_ms - play_t0) >= 700) {
+            play_fired = 1;
+            ui.menu = 9;
+            sx_enter();
+            sx_on = 0;
+            ui.force = 1;
+        }
+        if (play_defer && !(fm1_in.buttons & pb)) {
+            play_defer = 0;
+            if (!play_fired) pressed |= pb;                  /* a short press: it counts now */
+        }
+        if (!(fm1_in.buttons & pb)) play_t0 = 0;
+    }
+    gm_level_hold();
     if (pressed || notes)
         ui_input_ms = fm1_ms;
-    if (home == BT_HOLD) {                              /* HOME held: open the menu, or leave it */
+    if (q_unlock_t0 && ((pressed >> panel.btn[B_HOME]) & 1u)) { q_unlock_t0 = 0, q_unlock_eat = 1, ui.force = 1; }      /* HOME closes the banner (and that tap does nothing else) */
+    if (q_unlock_eat && home == BT_TAP) { home = BT_NONE; q_unlock_eat = 0; }
+    if (home == BT_HOLD) {
+        q_unlock_eat = 0;                              /* HOME held: open the menu, or leave it */
         if (ui.menu) {
             menu_close();
         } else {
@@ -759,6 +952,12 @@ static void ui_input(void)
             ui.force = 1;
             song.seq_mode = 0;
         }
+    }
+    if (ui.menu == 9 && home == BT_TAP) {               /* the sound select: HOME goes back, as a hold of PLAY came in */
+        sx_leave();
+        ui.menu = 0, ui.force = 1;
+        go_home();
+        return;
     }
     if (ui.menu) {                                      /* HOME / REC taps do nothing here */
         punch.hold = 0;
@@ -807,8 +1006,13 @@ static void ui_input(void)
         return;
     }
 #endif
-    if (home == BT_TAP)                                 /* HOME acts on release: a hold opens the menu */
-        go_home();
+    if (home == BT_TAP) {                               /* HOME acts on release: a hold opens the menu */
+        if ((ui.home || ui.page == (uint8_t)page_first(FAM_TRK)) && !ft_on && !(song.rec && song.playing)) {
+            q_town = (uint8_t)((q_town + 1u) % 3u);     /* already home: the next home (village -> party -> boss) */
+            ui.force = 1;
+        } else
+            go_home();
+    }
     cursor_fix();                                       /* LEN may have changed (knob, editor, load) */
     for (id = 0; id < 14u; id++) {
         if (!((pressed >> id) & 1u))
@@ -860,7 +1064,7 @@ static void ui_input(void)
             preset_go((uint32_t)(((int32_t)cur + s % (int32_t)total + (int32_t)total) % (int32_t)total));
     }
     if ((s = panel_enc(EN_ALGO)) != 0 && !ft_on)     /* ALGORITHM: the selected track, on every page (not in a take) */
-        track_select((uint32_t)clamp((int32_t)song.sel + (s > 0 ? 1 : -1), 0, NTRK - 1));
+        track_select(track_next(s));
     if ((s = panel_enc(EN_SELECT)) != 0) {          /* SELECT knob = global tempo */
         song.g[G_BPM] = (int16_t)clamp(song.g[G_BPM] + accel(EN_SELECT, s, 200), GP[G_BPM].min, GP[G_BPM].max);
         ui.bpm_t = 40;                              /* the header's BPM lights up; no message over the header */
@@ -885,72 +1089,3 @@ static void ui_input(void)
     }
 }
 
-/* ---------------------------------------------------- panel setup --- */
-/* 30 s without input: give up and keep the old table (a stuck key cannot hang the boot) */
-#define SETUP_IDLE_MS 30000u
-static void panel_setup(void)
-{
-    uint32_t i, used = 0, t0 = fm1_ms;
-    const panel_t old = panel;
-    lcd_fill(0, 0, 240, 240, C_BLACK);
-    draw_text_box(0, 10, 240, &FONT_S, "HARDWARE CALIBRATION", C_WHITE, 1);
-    draw_text_box(0, 30, 240, &FONT_S, "TEACH EACH BUTTON AND KNOB", C_GRAY, 1);
-    while (fm1_in.buttons) {                             /* wait for OCT-/OCT+ release */
-        fm1_wdt_feed();
-        if (fm1_ms - t0 > SETUP_IDLE_MS)
-            goto timeout;
-    }
-    fm1_input_edges(0);
-    for (i = 0; i < NB; i++) {
-        uint32_t p = 0, id;
-        draw_text_box(0, 80, 240, &FONT_S, "PRESS", C_GRAY, 1);
-        draw_text_box(0, 100, 240, &FONT_Q, B_NAME[i], C_WHITE, 1);
-        t0 = fm1_ms;
-        while (!(p & ~used)) {
-            fm1_wdt_feed();
-            p |= fm1_input_edges(0);
-            if (fm1_ms - t0 > SETUP_IDLE_MS)
-                goto timeout;
-        }
-        for (id = 0; id < 14u; id++)
-            if (((p & ~used) >> id) & 1u)
-                break;
-        panel.btn[i] = (uint8_t)id;
-        used |= 1u << id;
-    }
-    used = 0;
-    for (i = 0; i < NE; i++) {
-        uint32_t e;
-        int32_t st = 0;
-        draw_text_box(0, 80, 240, &FONT_S, "TURN RIGHT", C_GRAY, 1);
-        draw_text_box(0, 100, 240, &FONT_Q, E_NAME[i], C_WHITE, 1);
-        for (e = 0; e < 7u; e++)
-            fm1_enc_take(e);
-        t0 = fm1_ms;
-        for (;;) {
-            fm1_wdt_feed();
-            if (fm1_ms - t0 > SETUP_IDLE_MS)
-                goto timeout;
-            for (e = 0; e < 7u; e++)
-                if (!((used >> e) & 1u) && (st = fm1_enc_take(e)) != 0)
-                    break;
-            if (e < 7u)
-                break;
-        }
-        panel.enc[i] = (uint8_t)e;
-        panel.dir[i] = (int8_t)(st > 0 ? 1 : -1);
-        used |= 1u << e;
-        fm1_delay_ms(300);
-        fm1_enc_take(e);
-    }
-    panel.magic = PANEL_MAGIC;
-    lcd_fill(0, 0, 240, 240, C_BLACK);
-    layers_init();
-    ui.force = 1;
-    return;
-timeout:
-    panel = old;
-    lcd_fill(0, 0, 240, 240, C_BLACK);
-    ui.force = 1;
-    ui_message("SETUP CANCELLED");
-}

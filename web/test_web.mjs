@@ -34,7 +34,7 @@ const E = vm.runInNewContext(proto + `
    CHOP, chopNovelty, chopHits, chopSnap, chopGrid, chopEqual, chopList, chopPick, chopFit, chopZones, wavFile, zipStore, crc32,
    UP, bank, capturePatch, auditionPatch, startWatch, libraryFile, readLibraryFile, paramKeys, patternFromSteps, stepsFromPattern, upName,
    mixer, GM_DRUM, drumName, parseNotes, fmtValue, F, DRUM_LANES, LV_NAMES, emptyDrum,
-   backupCapture, backupRestore, backupObjects, b64enc, b64dec })`,
+   backupCapture, backupRestore, backupObjects, b64enc, b64dec, SNG, buildSong, midiNotes, songSend, songErase })`,
 { setTimeout, clearTimeout, setInterval, clearInterval, console, TextEncoder });
 
 async function editorMock() {
@@ -91,6 +91,52 @@ async function editorMock() {
   rc = rc || E.parse[E.CMD.SMP_END](await rq(E.req.smpEnd(1, hdr), { timeout: 2000, retries: 0 })).rc;
   const si = E.parse[E.CMD.SMP_INFO](await rq(E.req.smpInfo()));
   ok(rc === 0 && si.slots[1].zones === 1 && si.slots[1].name === "TEST", "editor: sample upload (CRC checked by the mock)");
+  {   /* songs for Piano Hero / FM Hero: .mid -> notes -> SNG_* -> the device's sector (the mock == editor.c ed_sng_*) */
+    const smf = (evs, div = 480, tempo = 500000) => {         // evs: [delta, status, a, b]
+      const tr = [0, 0xFF, 0x51, 3, tempo >> 16, (tempo >> 8) & 255, tempo & 255];
+      evs.forEach(([dt, st, x, y]) => { let v = dt; const q = [v & 127]; while ((v >>= 7)) q.unshift((v & 127) | 128); tr.push(...q, st, x, y); });
+      tr.push(0, 0xFF, 0x2F, 0);
+      const h = [0x4D, 0x54, 0x68, 0x64, 0, 0, 0, 6, 0, 0, 0, 1, div >> 8, div & 255, 0x4D, 0x54, 0x72, 0x6B, 0, 0, tr.length >> 8, tr.length & 255];
+      return Uint8Array.from([...h, ...tr]);
+    };
+    const tune = smf([[0, 0x90, 60, 90], [480, 0x80, 60, 0], [0, 0x90, 64, 90], [240, 0x80, 64, 0], [0, 0x99, 36, 100], [10, 0x89, 36, 0], [0, 0x90, 67, 90], [960, 0x80, 67, 0]]);
+    const song = E.buildSong(tune, 0, "Ode to joy!.mid");
+    ok(song.notes === 3 && song.bpm === 120 && song.name === "ODE TO JOY" && song.data.length === 12 && song.hdr.length === 32
+      && song.data[0] === 0 && song.data[2] === 60 && song.data[3] === 12 && song.data[4] === 48 && song.data[6] === 64 && song.data[7] === 6,
+      "songs: a .mid -> 3 notes (drums left out), start 1/48 beat, length 1/12 beat, name and bpm");
+    ok(await E.songSend(rq, 1, song) === true, "songs: Piano song sent to song 1");
+    const hero = E.buildSong(tune, 1, "hero");
+    ok(await E.songSend(rq, 6 + 2, hero) === true, "songs: Hero song sent to song 8");
+    let si2 = E.parse[E.CMD.SNG_INFO](await rq(E.req.sngInfo()));
+    ok(si2.n === 12 && si2.per === 6 && si2.bytes === 3840 && si2.songs[1].notes === 3 && si2.songs[1].name === "ODE TO JOY" && si2.songs[1].bpm === 120
+      && si2.songs[8].notes === 3 && si2.songs[8].name === "HERO" && si2.songs.filter((x) => x.notes).length === 2, "songs: INFO lists them where they went");
+    const wrongKind = await E.songSend(rq, 8, song).then(() => "sent", (e) => e.message);       // a Piano song into an FM Hero slot
+    ok(/end rc 2/.test(wrongKind), "songs: a Piano song is refused in an FM Hero slot");
+    await E.songSend(rq, 8, hero);
+    ok(E.parse[E.CMD.SNG_INFO](await rq(E.req.sngInfo())).songs[8].notes === 3, "songs: overwrite = BEGIN again, then the new song");
+    const noBegin = E.parse[E.CMD.SNG_WRITE](await rq(E.req.sngWrite(3, 256, new Uint8Array(8))));
+    ok(noBegin.rc === 4, "songs: a write without BEGIN is refused (rc 4)");
+    await E.songErase(rq, 1);
+    si2 = E.parse[E.CMD.SNG_INFO](await rq(E.req.sngInfo()));
+    ok(si2.songs[1].notes === 0 && si2.songs[8].notes === 3 && si2.songs.filter((x) => x.notes).length === 1, "songs: erase takes only the chosen one");
+    const big = smf(Array.from({ length: 2000 }, (_, i) => [i ? 24 : 0, 0x90, 40 + (i % 30), 90]).flatMap((e, i) => [e, [12, 0x80, 40 + (i % 30), 0]]));
+    const e1 = (() => { try { E.buildSong(big, 0, "big"); return ""; } catch (e) { return e.code; } })();
+    ok(e1 === "toomany", "songs: more than 960 notes -> refused with a message (never cut)");
+    const chords = smf(Array.from({ length: 700 }, (_, i) => [[i ? 24 : 0, 0x90, 60, 90], [0, 0x90, 72, 90], [12, 0x80, 60, 0], [0, 0x80, 72, 0]]).flat());
+    ok(E.buildSong(chords, 0, "ch").notes === 700, "songs: under the limit the chords stay whole");
+    const dense = smf(Array.from({ length: 600 }, (_, i) => [[i ? 24 : 0, 0x90, 60, 90], [0, 0x90, 72, 90], [0, 0x90, 76, 90], [12, 0x80, 60, 0], [0, 0x80, 72, 0], [0, 0x80, 76, 0]]).flat());
+    ok(E.buildSong(dense, 0, "d").notes === 600, "songs: over 960 notes keeps only the top voice (the melody)");
+    const nm = (() => { try { E.buildSong(Uint8Array.from([1, 2, 3]), 0, "x"); return ""; } catch (e) { return e.code; } })();
+    ok(nm === "notMidi", "songs: a file that is not MIDI is refused");
+    const fw = readFileSync(join(HERE, "../firmware/src/editor.c"), "utf8"), sm = readFileSync(join(HERE, "../firmware/src/eng_sample.c"), "utf8");
+    const en2 = (/enum \{ ED_INFO = 1,([^}]*)\}/.exec(fw) || [])[1] || "";
+    const nmz = ["ED_INFO", ...en2.replace(/\/\*[^*]*\*\//g, "").split(",").map((x) => x.trim()).filter(Boolean)];
+    ok(nmz.indexOf("ED_SNG_BEGIN") + 1 === E.CMD.SNG_BEGIN && nmz.indexOf("ED_SNG_WRITE") + 1 === E.CMD.SNG_WRITE && nmz.indexOf("ED_SNG_END") + 1 === E.CMD.SNG_END
+      && nmz.indexOf("ED_SNG_ERASE") + 1 === E.CMD.SNG_ERASE && nmz.indexOf("ED_SNG_INFO") + 1 === E.CMD.SNG_INFO, "songs: command numbers == editor.c");
+    ok(/SNG_MAGIC 0x474E5346u/.test(sm) && /SNG_PER 6u/.test(sm) && /SNG_KINDS 2u/.test(sm) && /SNG_DATA 256u/.test(sm) && /SNG_BASE 0xD0000u/.test(sm)
+      && E.SNG.MAGIC === 0x474E5346 && E.SNG.PER === 6 && E.SNG.DATA === 256 && E.SNG.SECTOR === 4096 && /SMP_USER_SIZE \(64u << 10\)/.test(sm) && E.SMP.SLOT_SIZE === 65536,
+      "songs: layout constants == eng_sample.c (3 x 64 KiB samples, songs from 0xD0000)");
+  }
   /* a device that never answers */
   const dead = new E.Link(() => {}, { timeout: 30 });
   const err = await dead.request(E.req.info(), { retries: 1 }).then(() => null, (e) => e.message);
@@ -443,7 +489,7 @@ async function editorBackup() {
   const C = E.CMD;
   const { rq, done } = attachMock({});
   const info = E.parse[C.INFO](await rq(E.req.info()));
-  ok(info.proto === 6, "backup: INFO protocol v6");
+  ok(info.proto === 7, "backup: INFO protocol v7 (songs)");
   const ec = readFileSync(join(HERE, "../firmware/src/editor.c"), "utf8");
   ok(/ED_BK_IDS\[\] = \{0, 1, 2, 3, 4, 5, 6, 7, 32, 33, 34\}/.test(ec), "backup: the object ids == editor.c ED_BK_IDS");
   await rq(E.req.upStore(3, "BACKUP ME"));
@@ -481,14 +527,14 @@ async function editorV5() {
   const C = E.CMD;
   const { m, rq, ev, done } = attachMock({ watchMs: 1000 });
   const info = E.parse[C.INFO](await rq(E.req.info()));
-  ok(info.proto === 6 && /SLOOP/.test(info.version) && info.pcount === 58 && info.gcount === 32 && info.pe0 === 50, "v5/v6: INFO ends with the protocol version (6: backup)");
+  ok(info.proto === 7 && /SLOOP/.test(info.version) && info.pcount === 58 && info.gcount === 32 && info.pe0 === 50, "v5/v6: INFO ends with the protocol version (7: songs)");
   /* the firmware says the same: ED_DRUM_STEP is command 33, INFO sends 5, P_CHORD / the master globals as the mock has them */
   const ec = readFileSync(join(HERE, "../firmware/src/editor.c"), "utf8"), pc = readFileSync(join(HERE, "../firmware/src/params.c"), "utf8");
   const en = (/enum \{ ED_INFO = 1,([^}]*)\}/.exec(ec) || [])[1] || "";
   const names = ["ED_INFO", ...en.replace(/\/\*[^*]*\*\//g, "").split(",").map((x) => x.trim()).filter(Boolean)];
   ok(names.indexOf("ED_DRUM_STEP") + 1 === C.DRUM_STEP && names.indexOf("ED_TRACK_CHANGED") + 1 === C.TRACK_CHANGED
     && names.indexOf("ED_BK_LIST") + 1 === C.BK_LIST && names.indexOf("ED_BK_PUT") + 1 === C.BK_PUT
-    && /ed_b\(6\);\s*\/\* v6: the protocol version/.test(ec), "v5/v6: command numbers and INFO == editor.c");
+    && /ed_b\(7\);\s*\/\* v7: the protocol version/.test(ec), "v5/v6: command numbers and INFO == editor.c");
   const enumNames = (id) => (new RegExp(`${id}\\[\\] = \\{([^}]*)\\}`).exec(pc) || [])[1].split(",").map((x) => x.trim().replace(/"/g, ""));
   const chord = E.parse[C.DESC](await rq(E.req.desc(0, 49)));
   const gd = [];
@@ -697,7 +743,7 @@ print(",".join(i.filename + ":" + str(i.file_size) for i in z.infolist()))`, zp)
   const fitted = many.map((c) => ({ ...c, end: Math.min(c.end, c.start + Lf) }));
   let built = null;
   try { built = E.buildSlot("LONG", E.chopZones(long, fitted, 60, 0)); } catch (e) { built = null; }
-  ok(Lf < R * 0.5 && Lf > R * 0.4 && built && built.data.length <= E.SMP.MAX_DATA && built.hdr[6] === 16,
+  ok(Lf < R * 0.4 && Lf > R * 0.3 && built && built.data.length <= E.SMP.MAX_DATA && built.hdr[6] === 16,
     `chop: Fit to slot: 16 x 0.5 s cut to ${(Lf / R).toFixed(3)} s each, the slot builds`);
   ok(E.chopFit([{ start: 0, end: 100 }, { start: 0, end: 300 }], 250) === 150, "chop: fit keeps short chops whole, cuts the long ones");
 }

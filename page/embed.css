@@ -1,0 +1,10 @@
+html.embed { color-scheme: dark; }
+html.embed, html.embed body { background: transparent !important; margin: 0; overflow: hidden; }
+.embed #bar-ctl, .embed #budget, .embed #tabs, .embed main > h2, .embed main > p.sub, .embed main > *:not(#sim) { display: none !important; }
+.embed main { padding: 0 !important; margin: 0 !important; max-width: none !important; width: 100vw; }
+.embed #sim { margin: 0 !important; padding: 0 !important; background: transparent !important; border: 0 !important; }
+.embed #sim > *:not(.stage3d):not(.simtoast) { display: none !important; }
+.embed .stage3d { height: 100vh !important; min-height: 0 !important; border: 0 !important; border-radius: 0 !important; background: transparent !important; }
+.embed .s3d-status { display: none !important; }
+
+.embed .tools3d [data-t=mini], .embed .mini3d { display: none !important; }

@@ -9,6 +9,8 @@
 #define NVOICE 8                 /* voices per part, and the budget shared by all parts */
 #define NPOLY 8
 #define NPART 3                  /* synth parts: tracks 1..3 */
+/* the UI functions are never inlined (felucca.c: the image is ~15 KB smaller; the audio code keeps the compiler's inlining) */
+#define UI_NOINLINE __attribute__((noinline))
 #define NTRK 4                   /* + the drum track */
 #define TRK_DRUM 3
 enum { V_POLY, V_MONO, V_LEGATO, V_UNISON };   /* P_VOICE */
@@ -229,6 +231,7 @@ typedef struct track {
     uint8_t xf_on, xf;           /* fading; blocks of the fade still to render */
     int16_t pe_old[8];           /* P_E0..P_E7 of the sounding engine: the fade renders with these */
     uint8_t xp_n, xp_note[4], xp_vel[4];   /* note-ons during the fade, played on the new engine */
+    uint16_t perc;               /* 0, or 1 + kit * 16 + lane: this hero plays one sound of a synthesised drum kit (the Brazilian instruments) instead of its engine */
 } track_t;
 
 typedef struct {

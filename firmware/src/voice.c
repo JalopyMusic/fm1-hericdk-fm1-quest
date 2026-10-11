@@ -370,6 +370,10 @@ static void trk_note_on(track_t *t, uint32_t note, uint32_t vel)
         drum_on(note, vel);
         return;
     }
+    if (t->perc) {                                      /* a hero with a percussion sound: every key hits it */
+        drum_on_k(DRUM_SAMPLED + (uint32_t)(t->perc - 1u) / 16u, LANE_NOTE[(t->perc - 1u) % 16u], vel);
+        return;
+    }
     if (t->xf_on || t->eng_req != t->engine) {          /* engine switch under way: after the fade */
         for (i = 0; i < t->xp_n && t->xp_note[i] != note; i++)
             ;

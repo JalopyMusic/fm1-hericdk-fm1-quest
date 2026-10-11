@@ -8,7 +8,7 @@ from the WAV 'smpl' chunk; the ADPCM state at the loop start is stored so loops
 restart exactly.
 
 Sources:
-  assets/samples-cc0/   CC0 samples (CREDITS.txt there): PIANO (a grand), BASS, VIBES, HORNS, STRGS, FLUTE,
+  assets/samples-cc0/   CC0 samples (CREDITS.txt there): PIANO (a grand), BASS, VIBES, HORNS, CAVAQ, FLUTE, AGOGO, SANFO,
                         SCRCH (tools/gen_builtin_hiphop.py makes them; FLUTE and the KIT:
                         tools/fetch_cc0.py), and the acoustic drum kit of the GM map (KIT)
   gen_waves.py          Felucca's own drum sounds (the Hügelton Sample Pack): only SLICE's BREAK, or a
@@ -45,7 +45,7 @@ TR = 22050                                   # stored sample rate
 # envelope fades, "kit" one sample per key).
 # The other slots are user sets loaded from the web editor.
 CC0_SETS = [("PIANO", "piano"), ("BASS", "oneshot"), ("VIBES", "oneshot"), ("HORNS", "oneshot"),
-            ("STRGS", "oneshot"), ("FLUTE", "sus"), ("SCRCH", "oneshot"), ("KIT", "kit")]
+            ("CAVAQ", "oneshot"), ("FLUTE", "sus"), ("AGOGO", "oneshot"), ("SANFO", "sus"), ("KIT", "kit")]
 MEASURED_TUNING = ()                         # sets recorded off A440 (measured near the named note)
 
 # the preset of each set: name, {SET (filled in), TUNE, BITS, LOOP (filled in), CUT, -, DRV, -}, env, mono,
@@ -55,7 +55,9 @@ SET_PRESETS = {
     "BASS": ("UP BASS", [0, 0, 0, 0, 118, 0, 12, 0], (0, 127, 127, 26), 1, (0, 0, 0, 4), ()),
     "VIBES": ("VIBES", [0, 0, 0, 0, 127, 0, 0, 0], (0, 127, 127, 72), 0, (0, 24, 22, 30), ("P_LD_AMP", 18, "P_LRATE", 86)),
     "HORNS": ("HORN STAB", [0, 0, 0, 0, 120, 0, 20, 0], (0, 127, 127, 22), 0, (8, 0, 14, 18), ()),
-    "STRGS": ("STRING STB", [0, 0, 0, 0, 122, 0, 10, 0], (0, 127, 127, 26), 0, (0, 10, 12, 24), ()),
+    "CAVAQ": ("CAVAQUINHO", [0, 0, 0, 0, 122, 0, 6, 0], (0, 127, 127, 30), 0, (0, 10, 10, 22), ()),
+    "AGOGO": ("AGOGO BELL", [0, 0, 0, 0, 115, 0, 0, 0], (0, 127, 127, 34), 0, (0, 6, 16, 26), ()),
+    "SANFO": ("SANFONA", [0, 0, 0, 0, 110, 0, 0, 0], (8, 60, 115, 40), 0, (0, 12, 10, 20), ()),
     "FLUTE": ("LOFI FLUTE", [0, 0, 12, 0, 100, 0, 0, 0], (12, 80, 120, 60), 1, (0, 16, 26, 30), ("P_LD_PIT", 1, "P_LRATE", 89, "P_LFADE", 40)),
     "SCRCH": ("SCRATCH", [0, 0, 0, 0, 127, 0, 8, 0], (0, 127, 127, 18), 0, (0, 0, 0, 0), ()),
     "PERC": ("GM KIT", [0, 0, 0, 0, 127, 0, 0, 0], (0, 127, 127, 60), 0, (0, 0, 0, 6), ()),
@@ -64,6 +66,7 @@ SET_PRESETS = {
 EXTRA_PRESETS = [
     ("PIANO", "DUSTY PNO", [0, 0, 34, 0, 96, 0, 24, 0], (0, 98, 0, 52), 0, (0, 8, 10, 22), ()),
     ("PIANO", "LOFI KEYS", [0, 0, 45, 0, 78, 0, 30, 0], (0, 108, 0, 60), 0, (0, 30, 18, 34), ("P_LD_PIT", 1, "P_LRATE", 38)),
+    ("CAVAQ", "BERIMBAU", [0, -12, 0, 0, 118, 0, 14, 0], (0, 127, 127, 44), 1, (0, 4, 18, 28), ("P_LD_PIT", 1, "P_LRATE", 30)),
     ("BASS", "DEEP BASS", [0, -12, 0, 0, 90, 0, 40, 0], (0, 127, 127, 30), 1, (0, 0, 0, 0), ()),
 ]
 
@@ -74,15 +77,15 @@ NOTE = {"C": 0, "C#": 1, "D": 2, "D#": 3, "E": 4, "F": 5, "F#": 6, "G": 7, "G#":
 # GM drum map (General MIDI percussion, channel 10): role -> [(lo, hi, root)].
 # One sample can serve several GM notes; a range is pitched around its root.
 GM_KIT = {
-    "kick": [(35, 36, 36)], "rim": [(37, 37, 37)], "snare": [(38, 38, 38), (40, 40, 40)],
-    "clap": [(39, 39, 39)], "chh": [(42, 42, 42), (44, 44, 44)], "ohh": [(46, 46, 46)],
+    "kick": [(35, 36, 36)], "rim": [(37, 37, 37)], "snare": [(38, 38, 38)],
+    "clap": [(39, 39, 39)], "chh": [(42, 42, 42)], "ohh": [(46, 46, 46)],
     # (the toms skip the hi-hats' 42, 44, 46: a zone over them would win, the hats would play a tom)
-    "tomlo": [(41, 41, 43), (43, 43, 43), (45, 45, 43)], "tomhi": [(47, 48, 48), (50, 50, 48)],
-    "tom": [(41, 41, 47), (43, 43, 47), (45, 45, 47), (47, 48, 47), (50, 50, 47)],
-    "crash": [(49, 49, 49), (52, 52, 52), (55, 55, 55), (57, 57, 57)],
-    "ride": [(51, 51, 51), (53, 53, 53), (59, 59, 59)],
+    "tomlo": [(43, 43, 43)], "tomhi": [(47, 48, 48)],
+    "tom": [(43, 43, 47), (47, 48, 47)],
+    "crash": [(49, 49, 49)],
+    "ride": [(51, 51, 51)],
     "tamb": [(54, 54, 54)], "cowbell": [(56, 56, 56)], "conga": [(62, 64, 63)],
-    "shaker": [(69, 70, 70), (82, 82, 82)], "claves": [(75, 75, 75)], "wood": [(76, 77, 76)],
+    "shaker": [(69, 70, 70)], "claves": [(75, 75, 75)], "wood": [(76, 77, 76)],
 }
 GM_ROLE_WORDS = [("bassdrum", "kick"), ("kick", "kick"), ("snare", "snare"), ("hihat", "chh"), ("chat", "chh"),
                  ("ohat", "ohh"), ("clap", "clap"), ("tom lo", "tomlo"), ("tom hi", "tomhi"), ("tomlo", "tomlo"),

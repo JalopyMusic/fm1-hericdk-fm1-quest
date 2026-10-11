@@ -1,0 +1,22 @@
+{
+ "mago": {
+  "frames": 57,
+  "fps": 3
+ },
+ "archer": {
+  "frames": 70,
+  "fps": 3
+ },
+ "cleriga": {
+  "frames": 45,
+  "fps": 3
+ },
+ "knight": {
+  "frames": 62,
+  "fps": 3
+ },
+ "guerreiro": {
+  "frames": 70,
+  "fps": 3
+ }
+}

@@ -20,7 +20,8 @@ enum { ED_INFO = 1, ED_GET, ED_SET, ED_DUMP, ED_DESC, ED_STEP_GET, ED_STEP_SET, 
        ED_TRACK, ED_TRACK_MIX, ED_TRACK_DUMP, ED_TRACK_STEP,                    /* v3: tracks */
        ED_TRACK_PARAM, ED_TRACK_CHANGED,                                        /* v4: any track's parameters */
        ED_DRUM_STEP,                                                            /* v5: the 16 drum lanes */
-       ED_BK_LIST, ED_BK_GET, ED_BK_PUT };                                      /* v6: backup / restore */
+       ED_BK_LIST, ED_BK_GET, ED_BK_PUT,                                        /* v6: backup / restore */
+       ED_SNG_BEGIN, ED_SNG_WRITE, ED_SNG_END, ED_SNG_ERASE, ED_SNG_INFO };     /* v7: songs of Piano Hero / FM Hero */
 
 static uint8_t ed_out[600];
 static uint32_t ed_n;
@@ -120,6 +121,48 @@ static int ed_smp_end(uint32_t k, const uint8_t *a, uint32_t na)
     ed_smp_inval(k);
     smp_user_scan(k);
     return usr_nz[k] ? 0 : 5;
+}
+
+/* ---- user songs (eng_sample.c): sector SNG_BASE + sid * 4 KiB, sid 0..5 Piano Hero, 6..11 FM Hero.
+ * BEGIN erases the sector, WRITE fills it (offset >= 256, a multiple of 256), END sends the 32 byte header:
+ * the data CRC is checked, the header is written last. */
+static uint8_t ed_sng_open[SNG_N];
+static uint32_t ed_sng_sec(uint32_t sid) { return SNG_BASE + sid * SNG_SECTOR; }
+static int ed_sng_erase(uint32_t sid)
+{
+    uint32_t took;
+    int rc;
+    sng_ok[sid] = 0;
+    rc = fl_erase4k_quiet(ed_sng_sec(sid), &took);
+    fm1_wdt_feed();
+    fm1_irq_off();
+    fl_inval(ed_sng_sec(sid), SNG_SECTOR);
+    fm1_irq_on();
+    return rc;
+}
+static int ed_sng_end(uint32_t sid, const uint8_t *a, uint32_t na)
+{
+    const sng_hdr_t *h = (const sng_hdr_t *)ed_smp_buf;
+    if (!ed_sng_open[sid] || sng_ok[sid])
+        return 6;                                  /* no BEGIN first */
+    if (ed_unpack7(a, na, ed_smp_buf, sizeof(sng_hdr_t)) != sizeof(sng_hdr_t))
+        return 1;
+    if (h->magic != SNG_MAGIC || h->version != 1u || h->kind != sid / SNG_PER || !h->notes ||
+        h->data_len != (uint32_t)h->notes * 4u || h->data_len > SNG_SECTOR - SNG_DATA)
+        return 2;
+    ed_sng_open[sid] = 0;
+    fm1_irq_off();
+    fl_inval(ed_sng_sec(sid), SNG_SECTOR);
+    fm1_irq_on();
+    if (st_crc32((const uint8_t *)sng_hdr(sid) + SNG_DATA, h->data_len) != h->crc)
+        return 3;
+    if (fl_write(ed_sng_sec(sid), ed_smp_buf, sizeof(sng_hdr_t)))
+        return 4;
+    fm1_irq_off();
+    fl_inval(ed_sng_sec(sid), SNG_SECTOR);
+    fm1_irq_on();
+    sng_scan(sid);
+    return sng_ok[sid] ? 0 : 5;
 }
 
 /* the engine byte of DUMP / RELOAD / TRACK: NENGINES = the drum track (no engine) */
@@ -567,7 +610,7 @@ static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes between F0
         for (i = 0; i < NENGINES; i++)
             ed_str(ENGINES[i]->name, 8);
         ed_b(NTRK);                                       /* v3 */
-        ed_b(6);                                          /* v6: the protocol version (backup) */
+        ed_b(7);                                          /* v7: the protocol version (songs) */
         break;
     case ED_GET:
     case ED_SET:
@@ -715,6 +758,57 @@ static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes between F0
                 nm[j] = h->name[j] >= 32 && h->name[j] < 127 ? h->name[j] : 0;
             ed_str(nm, 8);
             ed_b(usr_nz[i] ? (h->data_len + 1023u) / 1024u : 0u);
+        }
+        break;
+    case ED_SNG_BEGIN:                                     /* song -> song, rc (the sector is empty from now on) */
+    case ED_SNG_ERASE: {
+        uint32_t rc;
+        if (na < 1u || a[0] >= SNG_N || !flash_ok)
+            return;
+        rc = ed_sng_erase(a[0]) ? 1u : 0u;
+        ed_sng_open[a[0]] = (uint8_t)(cmd == ED_SNG_BEGIN && !rc);
+        ed_b(a[0]);
+        ed_b(rc);
+        break;
+    }
+    case ED_SNG_WRITE: {                                   /* song, off (3 x 7 bit), pack7 data -> song, off, rc */
+        uint32_t off, len, rc = 0;
+        if (na < 5u || a[0] >= SNG_N || !flash_ok)
+            return;
+        off = (uint32_t)a[1] | (uint32_t)a[2] << 7 | (uint32_t)a[3] << 14;
+        len = ed_unpack7(a + 4, na - 4u, ed_smp_buf, 256u);
+        if (off < SNG_DATA || (off & 0xFFu) || !len || off + len > SNG_SECTOR)
+            rc = 1;
+        else if (sng_ok[a[0]] || !ed_sng_open[a[0]])
+            rc = 4;                                        /* SNG_BEGIN first */
+        else if (fl_write(ed_sng_sec(a[0]) + off, ed_smp_buf, len))
+            rc = 3;
+        ed_b(a[0]);
+        ed_b(off);
+        ed_b(off >> 7);
+        ed_b(off >> 14);
+        ed_b(rc);
+        break;
+    }
+    case ED_SNG_END:                                       /* song, pack7 header -> song, rc */
+        if (na < 2u || a[0] >= SNG_N || !flash_ok)
+            return;
+        ed_b(a[0]);
+        ed_b((uint32_t)ed_sng_end(a[0], a + 1, na - 1u));
+        break;
+    case ED_SNG_INFO:                                      /* -> songs per kind, bytes per song, then per song: notes (0 = empty), name, bpm */
+        ed_b(SNG_N);
+        ed_b(SNG_PER);
+        ed_v((int32_t)(SNG_SECTOR - SNG_DATA));
+        for (i = 0; i < SNG_N; i++) {
+            const sng_hdr_t *h = sng_hdr(i);
+            char nm[13] = {0};
+            uint32_t j;
+            ed_v(sng_ok[i] ? h->notes : 0);
+            for (j = 0; sng_ok[i] && j < 12u; j++)
+                nm[j] = h->name[j] >= 32 && h->name[j] < 127 ? h->name[j] : 0;
+            ed_str(nm, 12);
+            ed_v(sng_ok[i] ? h->bpm : 0);
         }
         break;
     case ED_UP_LIST: {                                     /* start, count -> start, count, total, per slot: used, engine, name */

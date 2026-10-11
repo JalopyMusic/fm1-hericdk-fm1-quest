@@ -198,6 +198,82 @@ KFM = dict(
     CLAVE=S("fm", 2300, 0, 5, 0, 40, 100),
 )
 
+K_BR_A = kit(K808,                                               # surdo, caixa, tamborim, pandeiro, agogo, ganza
+        KICK=S("sine", 62, 7, 24, 10, 430, 120, click=14, filt=("lp", 1500, .1, "all")),                 # bumbo
+        KICK2=S("sine", 47, 4, 40, 24, 760, 122, 1.5, 30, 12, filt=("lp", 900, .1, "all")),              # surdo (the long, muffled one)
+        SNARE=S("tri", 235, 4, 8, 0, 70, 84, 1.6, 50, 30, "white", 108, 0, 105, ("hp", 2200, .15)),      # caixa
+        SNARE2=S("tri", 720, 2, 8, 0, 46, 96, 1.5, 40, 60, "white", 70, 0, 34, ("bp", 5200, .3)),        # tamborim
+        CLAP=dict(ndec=150, nlev=112),
+        CHH=S(None, src="white", nlev=100, ndec=34, filt=("bp", 8200, .3), hpf=6200),                    # chocalho
+        OHH=S(None, src="white", nlev=100, nhold=16, ndec=180, filt=("bp", 7600, .3), hpf=5600),         # ganza
+        TOMLO=S("sine", 92, 6, 40, 8, 340, 118, 1.5, 36, 16, "white", 18, 0, 30, ("lp", 1800, .1)),      # surdo de resposta
+        TOMHI=S("sine", 150, 5, 30, 6, 240, 116, 1.5, 36, 24, "white", 20, 0, 24, ("lp", 2600, .1)),     # repique
+        CRASH=S(None, src="white", nlev=96, nhold=30, ndec=900, filt=("bp", 6800, .25), hpf=4500),       # a wash of ganza
+        RIDE=S(None, 262, src="metal", nlev=102, ndec=240, filt=("bp", 7600, .4), hpf=5200, click=22),   # pandeiro jingles
+        SHAKER=S(None, src="white", nlev=100, nhold=6, ndec=60, filt=("bp", 4600, .6)),                  # reco-reco
+        CONGA=S("sine", 330, 5, 90, 0, 250, 112, 1.5, 30, 20),                                           # cuica-ish: a falling hoot
+        RIM=dict(hz=1500, decay=26),                                                                     # the wood of the caixa
+        COWBELL=S("bell", 1050, 0, 5, 6, 210, 106, filt=("bp", 2800, .5, "all")),                        # agogo, high
+        CLAVE=S("bell", 760, 0, 5, 6, 240, 104, filt=("bp", 2200, .5, "all")))
+
+K_BR_B = kit(K_BR_A,
+    KICK=S("sine", 70, 10, 16, 4, 260, 120, click=30, filt=("lp", 2200, .1, "all")),
+    KICK2=S("sine", 52, 6, 30, 30, 1100, 122, 1.5, 24, 10, filt=("lp", 700, .1, "all")),
+    SNARE=S("tri", 260, 3, 6, 0, 60, 80, 1.6, 40, 40, "white", 118, 0, 140, ("hp", 3000, .2)),
+    SNARE2=S("tri", 980, 2, 6, 0, 36, 96, 1.5, 50, 70, "white", 60, 0, 24, ("bp", 6400, .35)),
+    CHH=S(None, src="white", nlev=100, ndec=22, filt=("bp", 8800, .3), hpf=6800),
+    OHH=S(None, src="white", nlev=100, nhold=16, ndec=260, filt=("bp", 6800, .3), hpf=5200),
+    TOMLO=S("sine", 110, 6, 40, 8, 280, 118, 1.5, 36, 16, "white", 18, 0, 30, ("lp", 1800, .1)),
+    TOMHI=S("sine", 190, 5, 30, 6, 180, 116, 1.5, 36, 36, "white", 20, 0, 24, ("lp", 2800, .1)),
+    CRASH=S(None, src="white", nlev=96, nhold=20, ndec=600, filt=("bp", 7200, .25), hpf=5000),
+    RIDE=S(None, 262, src="metal", nlev=102, ndec=160, filt=("bp", 8200, .4), hpf=5600, click=30),
+    SHAKER=S(None, src="white", nlev=100, nhold=10, ndec=90, filt=("bp", 3800, .6)),
+    CONGA=S("sine", 180, 4, 60, 0, 300, 116, 1.5, 24, 16),
+    RIM=dict(hz=1800, decay=20),
+    COWBELL=S("bell", 1300, 0, 5, 6, 160, 106, filt=("bp", 3200, .5, "all")),
+    CLAVE=S("bell", 900, 0, 5, 6, 200, 104, filt=("bp", 2400, .5, "all")))
+K_BR_C = kit(K808,                                                                          # the carioca funk: a big 808 and a tamborzao
+    KICK=S("sine", 48, 14, 40, 18, 700, 124, click=24, drive=30),
+    KICK2=S("sine", 44, 10, 60, 30, 1200, 124, drive=50),
+    SNARE=S("tri", 200, 6, 8, 0, 70, 90, 1.6, 60, 40, "white", 120, 0, 150, ("hp", 1800, .2), drive=40),
+    SNARE2=S("tri", 760, 3, 6, 0, 40, 96, 1.5, 50, 60, "white", 70, 0, 30, ("bp", 5600, .3)),
+    CLAP=dict(nlev=124, ndec=200),
+    TOMLO=S("sine", 85, 12, 60, 8, 420, 120, 1.5, 36, 20, drive=20),
+    TOMHI=S("sine", 130, 10, 50, 6, 300, 118, 1.5, 36, 24, drive=20),
+    SHAKER=S(None, src="white", nlev=100, nhold=6, ndec=40, filt=("bp", 5200, .6)),
+    CONGA=S("sine", 330, 5, 90, 0, 250, 112, 1.5, 30, 20),
+    COWBELL=S("bell", 1050, 0, 5, 6, 210, 106, filt=("bp", 2800, .5, "all")),
+    CLAVE=S("bell", 760, 0, 5, 6, 240, 104, filt=("bp", 2200, .5, "all")))
+K_BR_X = kit(K808,                                                                          # the extras, three of each
+    KICK=S("sine", 70, 10, 30, 12, 350, 120, click=18, filt=("lp", 1600, .1, "all")),                        # zabumba A
+    KICK2=S("sine", 60, 8, 50, 24, 600, 122, drive=20, filt=("lp", 1200, .1, "all")),                          # zabumba B
+    SNARE=S("bell", 2600, 0, 5, 40, 900, 100, filt=("bp", 3200, .6, "all")),                                  # triangulo A
+    SNARE2=S("bell", 3400, 0, 5, 20, 500, 100, filt=("bp", 4200, .6, "all")),                                 # triangulo B
+    CLAP=S("bell", 2900, 0, 5, 0, 120, 100, filt=("bp", 3600, .5, "all")),                                    # triangulo C (muted)
+    CHH=S("sine", 190, 4, 300, 0, 900, 112, 1.5, 60, 40),                                                       # berimbau A
+    OHH=S("sine", 240, 6, 200, 0, 800, 112, 2.0, 50, 30),                                                       # berimbau B
+    TOMLO=S("sine", 160, 0, 5, 10, 400, 112, click=40),                                                         # berimbau C
+    TOMHI=S("square", 220, 0, 5, 300, 600, 100, 1.5, 40, 10, filt=("lp", 1800, .2, "all")),                    # sanfona A
+    CRASH=S("tri", 330, 0, 5, 400, 500, 104, 1.5, 40, 20, filt=("lp", 2400, .2, "all")),                       # sanfona B
+    RIDE=S("fm", 262, 0, 5, 450, 500, 100, drive=10),                                                           # sanfona C
+    SHAKER=S("sine", 120, 5, 40, 0, 280, 118, click=30),                                                        # atabaque A
+    CONGA=S("sine", 160, 4, 40, 0, 220, 116, click=24),                                                         # atabaque B
+    RIM=S("bell", 880, 0, 5, 0, 160, 104, click=40, filt=("hp", 400, .1, "all")),                              # cavaquinho A
+    COWBELL=S("tri", 1175, 0, 5, 0, 140, 104, click=50),                                                        # cavaquinho B
+    CLAVE=S(None, src="white", nlev=110, nhold=0, ndec=60, filt=("bp", 7000, .5), hpf=5000))                   # caxixi
+
+# the chosen takes (sounds page, 2026-10-10): A = the first samba kit, B = drier, C = carioca funk
+K_BR_FINAL = dict(K_BR_A)
+for _lane, _var in (("KICK", K_BR_FINAL), ("KICK2", K_BR_FINAL)):
+    pass
+for _lane in ("KICK", "KICK2", "SNARE", "SNARE2", "CLAP", "CHH", "OHH", "TOMHI", "RIDE"):
+    K_BR_FINAL[_lane] = K_BR_C[_lane]
+K_BR_FINAL["SHAKER"] = K_BR_B["SHAKER"]                      # reco-reco B; the crash (A), the agogos (A), the wood (A) and the cuica (A) stay
+K_BR_2 = kit(K_BR_FINAL,                                      # the extras on the same base: zabumba, triangles, berimbaus, sanfona, atabaque, cavaquinho
+    KICK=K_BR_X["KICK2"], SNARE=K_BR_X["SNARE"], SNARE2=K_BR_X["SNARE2"], CLAP=K_BR_X["CLAP"],
+    CHH=K_BR_X["CHH"], OHH=K_BR_X["OHH"], TOMLO=K_BR_X["TOMLO"], TOMHI=K_BR_X["TOMHI"],
+    RIDE=K_BR_X["SHAKER"], CONGA=K_BR_X["COWBELL"])
+
 KITS = [
     # -- the machines
     ("808", "HIP HOP", 0, K808),
@@ -299,13 +375,7 @@ KITS = [
         KICK=dict(decay=520, drive=20, click=40),
         SNARE=S("tri", 230, 5, 10, 0, 80, 84, 1.7, 60, 36, "white", 100, 4, 130, ("hp", 1800, .2), drive=20),
         CLAP=dict(ndec=160), RIM=dict(tlev=104), SHAKER=dict(ndec=70, nlev=98))),
-    ("AMAPIANO", "AMAPIANO", 0, kit(K808,
-        KICK=S("sine", 54, 14, 20, 8, 300, 124, click=40, drive=16),
-        KICK2=S("sine", 55, 24, 120, 20, 700, 124, 2.0, 50, 30, drive=56,             # the log drum
-                filt=("lp", 1400, .5, "all"), fenv=1.5),
-        SHAKER=S(None, src="white", nlev=104, nhold=16, ndec=70, filt=("bp", 6500, .35)),
-        CLAP=dict(ndec=260), CONGA=dict(decay=260),
-        COWBELL=dict(hz=900, decay=160))),
+    ("BRASIL", "SAMBA", 0, K_BR_FINAL),
     ("AFRO", "AFROBEAT", 0, kit(K808,
         KICK=S("sine", 60, 10, 30, 6, 260, 120, click=20, filt=("lp", 2000, .1, "all")),
         SNARE=S("tri", 330, 3, 10, 0, 60, 92, 1.5, 50, 30, "white", 70, 0, 60, ("bp", 5000, .3)),
@@ -327,7 +397,7 @@ KITS = [
         OHH=S(None, src="white", nlev=92, nhold=10, ndec=160, filt=("bp", 5000, .3), hpf=4000),
         CONGA=dict(decay=320))),
     # -- synths and games
-    ("SYNTHWV", "SYNTHWAVE", 0, kit(K707,
+    ("SYNTHWAVE", "RETRO 80S", 0, kit(K707,
         SNARE=dict(ndec=360, drive=50, nlev=120, hold=10),
         TOMLO=S("sine", 85, 18, 160, 14, 600, 120, 1.5, 40, 24, "white", 24, 0, 50, ("lp", 2500, .1)),
         TOMHI=S("sine", 130, 18, 160, 14, 520, 118, 1.5, 40, 24, "white", 24, 0, 50, ("lp", 3000, .1)))),
@@ -364,6 +434,7 @@ KITS = [
         RIDE=S(None, 320, src="cym", nlev=90, ndec=2400, filt=("bp", 6500, .35), hpf=3500, click=16),
         TOMLO=S("sine", 110, 3, 30, 6, 400, 106, 1.5, 40, 20, "white", 16, 0, 40, ("lp", 2000, .1)),
         TOMHI=S("sine", 160, 3, 30, 6, 340, 104, 1.5, 40, 20, "white", 16, 0, 40, ("lp", 2500, .1)))),
+    ("BRASIL 2", "EXTRAS", 0, K_BR_2),
 ]
 
 
@@ -372,7 +443,7 @@ def main(path):
     L = ["/* generated by tools/gen_drumkits.py */", "#pragma once",
          f"#define DS_NKITS {len(KITS)}u", "static const dkit_t DS_KITS[DS_NKITS] = {"]
     for name, style, crush, k in KITS:
-        assert len(name) <= 8 and len(style) <= 12, name
+        assert len(name) <= 9 and len(style) <= 12, name
         L.append(f'    {{"{name}", "{style}", 0x{crush:02X}, {{')
         for lane in LANES:
             v = enc(k[lane], levels.get(name, {}).get(lane, 0.0))

@@ -1,0 +1,661 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: GPL-3.0-only. Página de apresentação e instalação do FM1 Quest (v0.2). Gerada por _fonte/build.py a partir deste modelo e de _fonte/i18n.py. -->
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title data-i="title"></title>
+<!--SEO-->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' https://api.github.com; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<style>
+  @font-face { font-family: "Pixelify Sans"; src: url(assets/PixelifySans-400.ttf) format("truetype"); font-display: swap; }
+  @font-face { font-family: "Jacquarda Bastarda 9"; src: url(assets/JacquardaBastarda9.ttf) format("truetype"); font-display: swap; }
+  :root { --bg: #1e1418; --bg2: #170f13; --fg: #f2e2c4; --dim: #a89080; --tile: #3a2620; --line: #5a3a28; --gold: #c8963c; --hi: #f0c860;
+          --blue: #5a8ad0; --green: #7ab04e; --yellow: #f0c860; --orange: #e0803a; --red: #e0503c; --link: #f0c860; --grey: #8c8078; --top: 84px; }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: calc(var(--top) + 12px); }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.6 "Pixelify Sans", ui-monospace, monospace; overflow-x: hidden; }
+  /* text links: bold yellow, an underline that shrinks to nothing on hover; outside links get a diagonal arrow (no underline under it) */
+  a:not(.btn):not(.ed):not(.rc):not(.nobd) { color: var(--link); font-weight: 700; text-decoration: none; background: linear-gradient(currentColor, currentColor) 0 100% / 100% 1px no-repeat; background-clip: content-box; background-origin: content-box; transition: background-size .45s cubic-bezier(.16,1,.3,1), color .2s; }
+  a:not(.btn):not(.ed):not(.rc):not(.nobd):hover { background-size: 0 1px; background-position: 100% 100%; color: #fff; }
+  a[target=_blank]:not(.btn):not(.ed):not(.rc):not(.nobd) { position: relative; padding-right: 1.1em; }
+  a[target=_blank]:not(.btn):not(.ed):not(.rc):not(.nobd)::after { content: "\2197"; position: absolute; right: 0; top: 0; font-weight: 700; text-decoration: none; }
+  .rc { display: inline-block; padding: 12px 18px; background: #fff; color: #000; font-weight: 700; text-decoration: none; border: 0; }
+  .rc:hover { background: var(--hi); color: #000; }
+  img { image-rendering: pixelated; }
+  button { font-family: inherit; }
+  [hidden] { display: none !important; }
+
+  /* ---------- fixed top: logo centred, tools on the right (two separate pieces) ---------- */
+  #brand { position: fixed; z-index: 30; top: 0; left: 0; right: 0; height: var(--top); display: flex; justify-content: center; align-items: center; pointer-events: none;
+           background: linear-gradient(var(--bg) 62%, rgba(30,20,24,0)); }
+  #brand a { pointer-events: auto; display: block; line-height: 0; }
+  #brand img { height: 70px; width: auto; image-rendering: auto; filter: drop-shadow(0 3px 0 #000) drop-shadow(0 0 2px #000); }
+  #tools { position: fixed; z-index: 40; top: 10px; right: 12px; display: flex; align-items: flex-start; gap: 8px; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 12px; font-size: 15px; line-height: 1; color: var(--fg); text-decoration: none; cursor: pointer;
+         background: var(--tile); border: 1px solid var(--gold); box-shadow: inset 0 0 0 2px var(--bg), inset 0 0 0 3px #6a4030; white-space: nowrap; }
+  .btn:hover { background: #4a3228; color: #fff; }
+  .btn svg { width: 18px; height: 18px; fill: currentColor; flex: none; }
+  .btn .star { color: var(--hi); }
+  #lang { display: flex; align-items: center; gap: 9px; height: 38px; font-size: 14px; letter-spacing: .06em; }
+  #lang a { color: var(--dim); text-decoration: none; padding: 2px 0; border-bottom: 1px solid transparent; }
+  #ver { display: inline-flex; align-items: center; height: 38px; font: 600 14px/1 "Pixelify Sans", monospace; letter-spacing: .06em; color: var(--hi); }
+  #lang a:hover { color: #fff; border-bottom-color: var(--gold); }
+  #lang a.on { color: var(--hi); border-bottom-color: var(--hi); }
+  #install { background: var(--hi); color: #1e1418; border-color: var(--gold); font-weight: 600; letter-spacing: .05em; text-transform: uppercase; box-shadow: none; }
+  #install:hover { background: #fff0b0; color: #1e1418; }
+  #install.plug { background: #ffb39c; border-color: var(--red); }
+  #install:disabled { background: #2e2226; color: var(--dim); border-color: var(--line); cursor: default; }
+  #rollback { border-color: var(--red); color: #ffd2c8; }
+  #rollback:hover { background: #4a2a28; }
+  #prog { position: absolute; top: 46px; right: 0; width: 260px; padding: 6px 8px; background: rgba(30,20,24,.92); border: 1px solid var(--line); }
+  .btn.icon { width: 38px; padding: 0; justify-content: center; } #sound .soff { display: block; } #sound .son { display: none; } #sound.on .soff { display: none; } #sound.on .son { display: block; } #sound.on { background: var(--hi); color: #1e1418; }
+  #bar { display: block; width: 100%; height: 10px; border: 1px solid var(--gold); background: #2e2226; overflow: hidden; }
+  #bar i { display: block; height: 100%; width: 0; background: var(--orange); transition: width .25s steps(12); }
+  #bar.ok i { background: var(--green); } #bar.bad i { background: var(--red); }
+  #status { display: block; margin-top: 4px; font-size: 12px; line-height: 1.25; color: var(--fg); overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+  #status.bad { color: #ff9c8a; } #status.ok { color: #b6e08a; }
+  #menubtn { width: 38px; padding: 0; justify-content: center; }
+  #menubtn svg { width: 22px; height: 22px; }
+
+  /* ---------- menu drawer (scroll links + thanks) ---------- */
+  #veil { position: fixed; inset: 0; z-index: 50; background: rgba(10,6,8,.6); opacity: 0; pointer-events: none; transition: opacity .25s; }
+  #drawer { position: fixed; z-index: 60; top: 0; right: 0; bottom: 0; width: min(380px, 92vw); background: var(--bg2); border-left: 2px solid var(--gold); transform: translateX(102%);
+            transition: transform .3s cubic-bezier(.16,1,.3,1); overflow-y: auto; padding: 18px 20px 28px; }
+  body.menu #veil { opacity: 1; pointer-events: auto; } body.menu #drawer { transform: none; }
+  #drawer h3 { font: 400 15px/1 "Pixelify Sans", monospace; color: var(--dim); letter-spacing: .14em; text-transform: uppercase; margin: 22px 0 10px; }
+  #drawer h3:first-of-type { margin-top: 6px; }
+  #drawer .close { float: right; }
+  .nav, .ext { display: flex; flex-direction: column; align-items: flex-start; gap: 9px; }
+  .nav a, .ext a { font-size: 16px; }
+  .ext a.rc { margin-top: 4px; }
+  #drawer p { font-size: 14px; margin: 0 0 12px; }
+  .grey { color: var(--grey); font-size: 13px; line-height: 1.5; }
+
+  /* ---------- page ---------- */
+  main { padding-top: var(--top); }
+  section { max-width: 1040px; margin: 0 auto; padding: 56px 20px 8px; }
+  section.wide { max-width: none; padding: 0; }
+  #modelo { height: calc(100vh - var(--top)); min-height: 520px; position: relative; display: grid; grid-template-columns: minmax(0, 1fr); background: radial-gradient(ellipse at 40% 40%, #2c1c22, var(--bg) 70%); }
+  #modelo.with-dock { grid-template-columns: minmax(0, 1fr) 360px; }
+  #dockToggle { display: none; position: absolute; z-index: 6; top: 10px; right: 368px; width: 36px; height: 36px; align-items: center; justify-content: center; padding: 0; background: rgba(30,20,24,.92); color: var(--hi); border: 2px solid var(--gold); border-radius: 8px; cursor: pointer; }
+  #dockToggle svg { width: 20px; height: 20px; fill: currentColor; transition: transform .25s; } #dockToggle:hover { background: #3a2a30; color: #fff; }
+  #modelo.with-dock #dockToggle { display: flex; } #modelo.with-dock.min { grid-template-columns: minmax(0, 1fr) 0px; } #modelo.min #dock { display: none; } #modelo.min #dockToggle { right: 10px; } #modelo.min #dockToggle svg { transform: rotate(180deg); }
+  .simcol { position: relative; min-height: 0; }
+  .simcol iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: transparent; }
+  #dock { overflow-y: auto; background: rgba(18,12,15,.94); border-left: 2px solid var(--gold); }
+  .dock-in { padding: 16px 16px 28px; }
+  .dk-h { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; font: 600 17px/1.2 "Pixelify Sans", monospace; color: var(--hi); }
+  .dk-led { width: 10px; height: 10px; background: #7ab04e; box-shadow: 0 0 8px #7ab04e; }
+  .dk-tabs { display: flex; gap: 4px; margin: 12px 0; } .dk-tabs button { flex: 1; padding: 9px 4px; font-size: 14px; background: var(--tile); color: var(--dim); border: 1px solid var(--line); cursor: pointer; }
+  .dk-tabs button.on { color: #1e1418; background: var(--hi); border-color: var(--gold); }
+  .flasks.sgrid { flex-wrap: wrap; row-gap: 8px; } .flasks.sgrid .flask { flex: 0 0 calc(33.3% - 8px); }
+  .flasks { display: flex; gap: 10px; margin: 6px 0 10px; } .flask { flex: 1; text-align: center; cursor: pointer; font-size: 12px; color: var(--dim); }
+  .flask i { display: block; position: relative; width: 38px; height: 54px; margin: 0 auto 4px; border: 2px solid #5a5560; border-radius: 6px 6px 14px 14px; background: #14101a; overflow: hidden; }
+  .flask i b { position: absolute; left: 0; right: 0; bottom: 0; background: linear-gradient(#f0c860, #e0803a); transition: height .4s; }
+  .flask.on i { border-color: var(--hi); box-shadow: 0 0 10px rgba(240,200,96,.35); } .flask.on { color: var(--fg); }
+  .dk-row { display: flex; flex-wrap: nowrap; gap: 6px; align-items: stretch; margin: 8px 0; }
+  .dk-row > button { box-sizing: border-box; flex: 1 1 auto; min-width: 0; height: 46px; min-height: 46px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border-width: 2px; padding: 0 8px; font-size: 13px; white-space: nowrap; }
+  .dk-row > .upbtn svg { width: 22px; height: 22px; }
+  .upbtn { position: relative; display: inline-flex; align-items: center; gap: 10px; min-height: 46px; padding: 0 18px 0 12px; font: 600 15px/1 "Pixelify Sans", monospace; color: #1e1418; background: var(--hi); border: 2px solid var(--gold); cursor: pointer; }
+  .upbtn svg { width: 28px; height: 28px; transform: rotate(-90deg); } .upbtn .trk { fill: none; stroke: rgba(30,20,24,.25); stroke-width: 4; }
+  .upbtn .ring { fill: none; stroke: #1e1418; stroke-width: 4; stroke-linecap: butt; stroke-dasharray: 119.4; stroke-dashoffset: 119.4; transition: stroke-dashoffset .25s linear; }
+  .upbtn.spin .ring { animation: spin 1s linear infinite; stroke-dashoffset: 90; transform-origin: center; } @keyframes spin { to { transform: rotate(360deg); } }
+  .upbtn:disabled, .upbtn.off { background: #2e2226; color: var(--dim); border-color: var(--line); cursor: default; } .upbtn:hover:not(:disabled) { background: #fff0b0; }
+  .dk-msg { display: none; align-items: flex-start; gap: 10px; margin-top: 10px; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--line); background: #2a2230; color: var(--fg); font: 600 14px/1.35 "DM Sans", system-ui, sans-serif; }
+  .dk-msg.show { display: flex; } .dk-msg svg { flex: none; width: 20px; height: 20px; margin-top: 1px; } .dk-msg span { min-width: 0; overflow-wrap: anywhere; }
+  .dk-msg.ok { background: #1c3a22; border-color: #5aae52; color: #d4f7bd; } .dk-msg.bad { background: #43211c; border-color: #d0583f; color: #ffd2c6; } .dk-msg.info { background: #2a2838; border-color: #6a6aa8; color: #dcdcf4; }
+  .lim { margin: 8px 0 0; } .lim ul { margin: 0; padding-left: 18px; } .lim li { margin: 2px 0; }
+  .circle { position: relative; width: 240px; height: 240px; margin: 8px auto; } .circle canvas#rcv { width: 240px; height: 240px; image-rendering: pixelated; }
+  .rplay { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 6px; text-align: center; }
+  .rctl { display: flex; flex-direction: column; align-items: center; gap: 5px; } .rctl input { width: 120px; accent-color: var(--hi); }
+  .btn2.mini { font-size: 12px; padding: 7px 10px; text-decoration: none; display: inline-block; color: var(--fg); }
+  #modelo .hint { position: absolute; z-index: 2; left: 0; right: 0; bottom: 10px; text-align: center; font-size: 13px; color: var(--dim); pointer-events: none; text-shadow: 0 1px 0 #000; }
+
+  /* the YouTube block: it starts small in the middle and grows to the full width as you scroll */
+  #video { position: relative; background: linear-gradient(var(--bg), #120b0e 40%, var(--bg)); overflow: hidden; }
+  #video .vstage { min-height: calc(100vh - var(--top)); display: flex; align-items: center; justify-content: center; }
+  .vframe { position: relative; width: 100%; aspect-ratio: 16 / 9; max-height: calc(100vh - var(--top)); background: #0d0a0f; display: grid; place-items: center; overflow: hidden; will-change: transform;
+            box-shadow: 0 0 0 1px var(--gold), 0 0 60px rgba(240,200,96,.12); }
+  .vframe::before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(0deg, rgba(255,255,255,.025) 0 1px, transparent 1px 4px), radial-gradient(ellipse at 50% 45%, #2a1c24, #0d0a0f 72%); }
+  .vframe iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  .vph { position: relative; z-index: 1; text-align: center; padding: 0 20px; }
+  .vplay { width: 92px; height: 92px; margin: 0 auto 16px; border: 3px solid var(--hi); display: grid; place-items: center; box-shadow: inset 0 0 0 3px #0d0a0f, inset 0 0 0 5px #6a4030; }
+  .vplay::after { content: ""; border-left: 30px solid var(--hi); border-top: 19px solid transparent; border-bottom: 19px solid transparent; margin-left: 8px; }
+  .vph b { display: block; font: 400 30px/1.15 "Jacquarda Bastarda 9", serif; color: var(--hi); letter-spacing: .02em; }
+  .vph span { display: block; margin-top: 6px; font-size: 15px; color: var(--dim); }
+  #controles { padding-top: 40px; padding-bottom: 36px; }
+  kbd { font: 600 13px/1 ui-monospace, monospace; background: #2b2830; color: #f2e2c4; border: 1px solid #5a5560; border-bottom-width: 3px; border-radius: 4px; padding: 3px 7px; }
+  h2 .sub { display: block; margin-top: 6px; font: 400 16px/1.4 "Pixelify Sans", monospace; color: var(--dim); letter-spacing: 0; }
+  .keys { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin: 0 0 14px; } .keys b { font-weight: 600; color: var(--hi); margin-right: 4px; } .keys span { font-size: 14px; white-space: nowrap; }
+  .strip { display: flex; height: 5px; margin: 0 0 22px; max-width: 260px; } .strip i { flex: 1; }
+  .strip i:nth-child(1) { background: var(--blue); } .strip i:nth-child(2) { background: var(--green); } .strip i:nth-child(3) { background: var(--yellow); } .strip i:nth-child(4) { background: var(--orange); }
+  h1 { font: 400 46px/1.1 "Jacquarda Bastarda 9", serif; color: var(--hi); margin: 0 0 12px; letter-spacing: .02em; }
+  h2 { font: 600 26px/1.2 "Pixelify Sans", ui-monospace, monospace; color: var(--hi); margin: 0 0 10px; }
+  #novidades > h2, #controles > h2 { font: 400 46px/1.1 "Jacquarda Bastarda 9", serif; letter-spacing: .02em; }
+  p { margin: 0 0 14px; } .lead { font-size: 18px; max-width: 760px; }
+  .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 22px 0 0; }
+  .tile { background: var(--tile); padding: 12px 12px 14px; border: 1px solid var(--gold); border-top: 4px solid var(--c); min-height: 104px; }
+  .tile b { display: block; font-size: 21px; font-weight: 600; color: var(--c); line-height: 1.1; }
+  .tile span { display: block; font-size: 14px; color: var(--dim); margin-top: 5px; }
+  .panel { background: var(--tile); border: 1px solid var(--gold); box-shadow: inset 0 0 0 2px var(--bg), inset 0 0 0 3px #6a4030; padding: 16px 18px; margin: 0 0 18px; }
+  .small { color: var(--dim); font-size: 14px; } .small a { color: var(--fg); }
+  hr { border: 0; border-top: 1px solid var(--line); margin: 28px 0 18px; }
+
+  /* what changes in v0.2 */
+  .faces { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 14px; background: var(--tile); border: 1px solid var(--gold); padding: 22px 14px; margin: 22px 0 8px; }
+  .face { text-align: center; } .face img { display: block; width: 96px; height: 120px; border: 2px solid var(--c); background: #14101a; }
+  .face b { display: block; margin-top: 6px; font-size: 14px; font-weight: 400; color: var(--c); }
+  .plus { font: 400 40px/1 "Pixelify Sans", monospace; color: var(--gold); }
+  .mystery { width: 96px; height: 120px; display: grid; place-items: center; background: #0d0a0f; border: 2px solid #2a2230; position: relative; overflow: hidden; }
+  .mystery::before { content: ""; position: absolute; left: 50%; bottom: -4px; width: 78px; height: 54px; transform: translateX(-50%); background: #17121b; border-radius: 40px 40px 0 0; }
+  .mystery::after { content: ""; position: absolute; left: 50%; top: 20px; width: 40px; height: 44px; transform: translateX(-50%); background: #17121b; border-radius: 22px 22px 18px 18px; }
+  .mystery span { position: relative; z-index: 2; font-size: 38px; color: #6a5a78; font-weight: 600; }
+  .ncards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin: 22px 0 0; }
+  .card { background: var(--tile); border: 1px solid var(--gold); box-shadow: inset 0 0 0 2px var(--bg), inset 0 0 0 3px #6a4030; padding: 14px 14px 16px; display: flex; flex-direction: column; }
+  .card .pic { background: #14101a; display: grid; place-items: center; margin-bottom: 12px; border: 1px solid var(--line); padding: 8px; }
+  .card .pic img { width: 100%; max-width: 480px; height: auto; display: block; }
+  .card h3 { margin: 0 0 6px; font: 600 19px/1.2 "Pixelify Sans", monospace; color: var(--hi); }
+  .card p { margin: 0; font-size: 15px; color: var(--fg); }
+  .card.full { grid-column: 1 / -1; }
+  .pics { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; align-items: flex-start; margin-bottom: 12px; }
+  .pics img { height: auto; max-width: 100%; display: block; border: 1px solid var(--line); background: #14101a; }
+  .ults { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; } .ults figure { margin: 0; text-align: center; } .ults img { width: 100%; height: auto; display: block; border: 1px solid var(--line); }
+  .ults figcaption { font-size: 13px; color: var(--dim); margin-top: 4px; }
+
+
+
+  #igwrap { position: relative; display: inline-flex; }
+  #igtip { display: none; position: absolute; top: calc(100% + 10px); right: -40px; width: min(280px, 80vw); background: var(--tile); border: 1px solid var(--gold); box-shadow: inset 0 0 0 2px var(--bg), inset 0 0 0 3px #6a4030; padding: 12px 14px; font-size: 13px; line-height: 1.45; color: var(--fg); z-index: 80; text-align: left; }
+  #igtip b { color: var(--hi); font-size: 15px; }
+  #igwrap:hover #igtip, #igwrap:focus-within #igtip { display: block; }
+
+  /* the v0.2 change log */
+  .clog { display: grid; gap: 22px; margin: 26px 0 0; }
+  .clog article { background: var(--tile); border: 1px solid var(--gold); box-shadow: inset 0 0 0 2px var(--bg), inset 0 0 0 3px #6a4030; padding: 16px; }
+  .clog h3 { margin: 0 0 10px; font: 600 22px/1.2 "Pixelify Sans", ui-monospace, monospace; color: var(--hi); }
+  .clog p { margin: 0 0 12px; font-size: 16px; }
+  .clog .clips { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 12px; }
+  .clog video { flex: 0 1 360px; min-width: 0; aspect-ratio: 1 / 1; background: #14101a; border: 1px solid var(--line); image-rendering: pixelated; display: block; }
+  @media (max-width: 640px) { .clog .clips { flex-wrap: wrap; } .clog video { flex: 0 1 calc(50% - 5px); } .clog video:only-child { flex-basis: 62%; } .clog article { padding: 12px; } #novidades > h2, #controles > h2, h1 { font-size: 34px; } }
+  .clog details { margin: 6px 0 0; } .clog ul.snd { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+  .clog ul.snd li { display: flex; align-items: center; gap: 10px; background: #14101a; border: 1px solid var(--line); padding: 6px 10px; }
+  .clog ul.snd button { font: 600 14px/1 "Pixelify Sans", monospace; background: var(--tile); color: var(--fg); border: 1px solid var(--gold); padding: 7px 10px; cursor: pointer; }
+  .clog ul.snd span.sz { margin-left: auto; color: var(--dim); font-size: 13px; }
+
+  /* install */
+  .row { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 0; }
+  .ed { text-decoration: none; display: inline-block; padding: 10px 14px; background: var(--tile); border: 1px solid var(--gold); color: var(--link); }
+  .ed:hover { background: #4a3228; color: #fff; }
+  details { margin: 0 0 18px; } summary { cursor: pointer; font-weight: 600; color: var(--hi); font-size: 18px; padding: 6px 0; }
+  .btn2 { font: 600 15px/1 "Pixelify Sans", monospace; background: var(--tile); color: var(--fg); border: 1px solid var(--gold); padding: 13px 16px; cursor: pointer; }
+  .btn2:hover:not(:disabled) { background: #4a3228; } .btn2:disabled { color: var(--dim); border-color: var(--line); cursor: default; }
+  #log { color: var(--dim); font-size: 12px; white-space: pre-wrap; margin: 0; max-height: 320px; overflow: auto; background: #120c0f; border: 1px solid var(--line); padding: 12px; min-height: 60px; }
+  #log.bad { border-color: var(--red); color: #ffb4a6; }
+  footer { max-width: 1040px; margin: 0 auto; padding: 36px 20px 70px; }
+  footer .love { font-size: 15px; max-width: 780px; }
+
+  /* scroll reveal (GSAP): hidden only while the script is alive, so nothing is lost without JavaScript */
+  html.js .rv { opacity: 0; transform: translateY(46px); }
+  @media (max-width: 1380px) {
+    :root { --top: 132px; }
+    #brand { align-items: flex-start; padding-top: 8px; height: var(--top); } #brand img { height: 54px; }
+    #tools { left: 0; right: 0; top: 70px; justify-content: center; flex-wrap: wrap; padding: 0 10px; } #prog { right: auto; left: 50%; transform: translateX(-50%); top: 48px; width: min(300px, 92vw); }
+  }
+  @media (max-width: 980px) { #modelo.with-dock { grid-template-columns: minmax(0, 1fr); grid-template-rows: 60vh auto; height: auto; } #dock { border-left: 0; border-top: 2px solid var(--gold); } #dockToggle, #modelo.min #dockToggle { right: 10px; } #modelo.with-dock.min { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; } }
+  @media (max-width: 820px) { .tiles { grid-template-columns: repeat(2, 1fr); } .ncards { grid-template-columns: 1fr; } .ults { grid-template-columns: repeat(2, 1fr); } h1 { font-size: 28px; } #modelo { min-height: 460px; } }
+  @media (max-width: 560px) { #connect .t { display: none; } #connect { width: 38px; padding: 0; justify-content: center; } .mact { display: flex !important; } #modelo { height: 78vw; min-height: 300px; } #tools { gap: 6px; } .btn { padding: 0 9px; font-size: 14px; } #rollback span.t { display: none; } .vph b { font-size: 22px; } .vplay { width: 64px; height: 64px; } .vplay::after { border-left-width: 20px; border-top-width: 13px; border-bottom-width: 13px; } }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } html.js .rv { opacity: 1; transform: none; } }
+</style>
+<script>document.documentElement.classList.add("js");</script>
+</head>
+<body>
+
+<div id="brand"><a href="#modelo" title="FM1 Quest"><img src="assets/logo.svg" alt="FM1 Quest"></a></div>
+
+<div id="tools">
+  <button class="btn" id="rollback" hidden data-it="a_roll:title"><span class="t" data-i="t_rollback"></span>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5V2L7 6.5 12 11V8a5 5 0 1 1-5 5H5a7 7 0 1 0 7-8z"/></svg></button>
+  <nav id="lang" aria-label="Idioma / Language"><a href="{{HREF_pt}}" data-lang="pt" hreflang="pt" lang="pt">PT</a><a href="{{HREF_en}}" data-lang="en" hreflang="en" lang="en">EN</a><a href="{{HREF_es}}" data-lang="es" hreflang="es" lang="es">ES</a></nav>
+  <span id="ver" aria-label="Version">v0.2</span>
+  <a class="btn" id="gh" href="https://github.com/hericdk/fm1-quest" target="_blank" rel="noopener" data-it="a_gh:title">
+    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+    <span>GitHub</span><span class="star" id="stars" hidden>★ <b id="starn"></b></span></a>
+  <button class="btn" id="install" disabled>Instalar no FM1</button>
+  <button class="btn" id="connect"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18v12H3zm2 2v8h14V8zm2 1h2v4H7zm4 0h2v4h-2zm4 0h2v4h-2z"/></svg><span class="t" data-i="ov_midi"></span></button>
+  <button class="btn icon" id="sound" hidden aria-pressed="false" data-it="ov_snd_on:aria-label"><svg class="son" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6h4l5 4V5L7 9zm13.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z"/></svg><svg class="soff" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6h4l5 4V5L7 9zm13.6 1.2l1.4 1.4 2.2-2.2 1.4 1.4-2.2 2.2 2.2 2.2-1.4 1.4-2.2-2.2-2.2 2.2-1.4-1.4 2.2-2.2-2.2-2.2z"/></svg></button>
+  <div id="prog" hidden><span id="bar"><i></i></span><span id="status" aria-live="polite"></span></div>
+  <span id="igwrap"><a class="btn icon" id="ig" href="https://www.instagram.com/hericdk/" target="_blank" rel="noopener" aria-label="Instagram" aria-describedby="igtip"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.5 2h9A5.5 5.5 0 0 1 22 7.5v9a5.5 5.5 0 0 1-5.5 5.5h-9A5.5 5.5 0 0 1 2 16.5v-9A5.5 5.5 0 0 1 7.5 2zm0 2A3.5 3.5 0 0 0 4 7.5v9A3.5 3.5 0 0 0 7.5 20h9a3.5 3.5 0 0 0 3.5-3.5v-9A3.5 3.5 0 0 0 16.5 4h-9zM12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6zm5.2-3.2a1.2 1.2 0 1 1 0 2.4 1.2 1.2 0 0 1 0-2.4z"/></svg></a><span id="igtip" role="tooltip" data-i="ig_tip"></span></span>
+  <a class="btn icon" id="yt" href="https://www.youtube.com/@_heric" target="_blank" rel="noopener" aria-label="YouTube" title="YouTube"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.6 7.2a2.6 2.6 0 0 0-1.8-1.8C18.2 5 12 5 12 5s-6.2 0-7.8.4A2.6 2.6 0 0 0 2.4 7.2C2 8.8 2 12 2 12s0 3.2.4 4.8a2.6 2.6 0 0 0 1.8 1.8C5.8 19 12 19 12 19s6.2 0 7.8-.4a2.6 2.6 0 0 0 1.8-1.8c.4-1.6.4-4.8.4-4.8s0-3.2-.4-4.8zM10 15V9l5.2 3L10 15z"/></svg></a>
+  <button class="btn" id="menubtn" aria-expanded="false" data-it="a_menu:aria-label"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg></button>
+</div>
+
+<div id="veil"></div>
+<aside id="drawer" aria-label="Menu">
+  <button class="btn close" id="menuclose" data-it="a_close:aria-label"><svg viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19" stroke="currentColor" stroke-width="2.4" fill="none"/></svg></button>
+  <div class="mact" style="display:none;flex-direction:column;gap:8px;margin:0 0 6px">
+    <button class="btn" id="m-connect" style="width:100%;justify-content:flex-start"><span data-i="ov_midi"></span></button>
+    <button class="btn" id="m-sound" hidden style="width:100%;justify-content:flex-start"><span data-i="ov_snd"></span></button>
+  </div>
+  <h3 data-i="m_goto"></h3>
+  <nav class="nav">
+    <a href="#modelo" data-i="m_model"></a>
+    <a href="#controles" data-i="m_ctrl"></a>
+    <a href="#sobre" data-i="m_about"></a>
+    <a href="#novidades" data-i="m_news"></a>
+    <a href="#instalar" data-i="m_install"></a>
+    <a href="#voltar" data-i="m_back"></a>
+    <a href="#logsec" id="navlog" hidden data-i="m_log"></a>
+  </nav>
+  <h3 data-i="m_thanks"></h3>
+  <p data-i="m_comm"></p>
+  <div class="ext"><a href="https://www.reddit.com/r/MVaveFM1/" target="_blank" rel="noopener" data-i="m_reddit"></a></div>
+  <p style="margin-top:14px" data-i="m_fw"></p>
+  <div class="ext">
+    <a href="https://github.com/hugelton/Felucca" target="_blank" rel="noopener">Felucca · GitHub</a>
+    <a href="https://github.com/isod89/sloop-fm1" target="_blank" rel="noopener">Sloop · GitHub</a>
+  </div>
+  <h3 data-i="m_about_h"></h3>
+  <p data-i="love_short"></p>
+  <div class="ext"><a class="rc" href="https://raincake.com.br" target="_blank" rel="noopener">raincake.com.br</a></div>
+  <p class="grey" style="margin-top:22px" data-i="ai"></p>
+</aside>
+
+<main>
+  <section class="wide" id="logsec" hidden style="max-width:1040px;padding:36px 20px 24px">
+    <h2 id="log-h" style="font-size:22px" data-i="l_h"></h2>
+    <p class="small" id="log-note" data-i="l_note"></p>
+    <pre id="log" tabindex="0" data-it="a_log:aria-label"></pre>
+  </section>
+
+  <section class="wide" id="modelo">
+    <button id="dockToggle" type="button" aria-expanded="true" data-it="d_hide:aria-label"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.6 5.6 7.2 7l5 5-5 5 1.4 1.4L15 12zM13.6 5.6 12.2 7l5 5-5 5 1.4 1.4L20 12z"/></svg></button>
+    <div class="simcol">
+      <iframe id="simframe" src="about:blank" data-it="a_model:title" allow="autoplay; midi"></iframe>
+      <script>(function(){var L=document.documentElement.lang.slice(0,2);document.getElementById("simframe").src="sim/index.html?embed=1&lang="+L})();</script>
+    </div>
+    <aside id="dock" hidden aria-label="FM-1 USB">
+      <div class="dock-in">
+        <h3 class="dk-h"><span class="dk-led"></span><span data-i="d_title"></span></h3>
+        <p class="small" data-i="d_sub"></p>
+        <div class="dk-tabs" role="tablist"><button role="tab" class="on" data-tab="1" data-i="d_tab1"></button><button role="tab" data-tab="2" data-i="d_tab2"></button><button role="tab" data-tab="3" data-i="d_tab3"></button></div>
+        <div class="dk-pane" id="pane1">
+          <div class="flasks" id="flasks"></div>
+          <p class="small"><span data-i="d_space"></span>: <b id="spaceTxt">—</b></p>
+          <div class="dk-row">
+            <button class="upbtn" id="upbtn" type="button"><svg viewBox="0 0 44 44" aria-hidden="true"><circle class="trk" cx="22" cy="22" r="19"/><circle class="ring" id="upring" cx="22" cy="22" r="19"/></svg><span data-i="d_send"></span></button>
+            <button class="btn2" id="pv1" type="button" data-i="d_play"></button>
+            <button class="btn2" id="erbtn" type="button" data-i="d_erase"></button>
+          </div>
+          <input type="file" id="upfile" hidden accept=".wav,.mp3,.ogg,.oga,.flac,.m4a,.aac,audio/wav,audio/x-wav,audio/mpeg,audio/ogg,audio/flac,audio/mp4">
+          <div class="small lim" data-i="d_ok1"></div>
+          <div class="dk-msg" id="upmsg" role="status" aria-live="polite"></div>
+        </div>
+        <div class="dk-pane" id="pane2" hidden>
+          <div class="flasks sgrid" id="sg2"></div>
+          <p class="small"><span data-i="d_space_s"></span>: <b id="sp2">—</b></p>
+          <div class="dk-row">
+            <button class="upbtn" id="ub2" type="button"><svg viewBox="0 0 44 44" aria-hidden="true"><circle class="trk" cx="22" cy="22" r="19"/><circle class="ring" id="ur2" cx="22" cy="22" r="19"/></svg><span data-i="d_send"></span></button>
+            <button class="btn2" id="eb2" type="button" data-i="d_erase_s"></button>
+          </div>
+          <input type="file" id="uf2" hidden accept=".mid,.midi,audio/midi,audio/x-midi">
+          <div class="small lim" data-i="d_ok2"></div>
+          <div class="dk-msg" id="um2" role="status" aria-live="polite"></div>
+        </div>
+        <div class="dk-pane" id="pane3" hidden>
+          <div class="flasks sgrid" id="sg3"></div>
+          <p class="small"><span data-i="d_space_s"></span>: <b id="sp3">—</b></p>
+          <div class="dk-row">
+            <button class="upbtn" id="ub3" type="button"><svg viewBox="0 0 44 44" aria-hidden="true"><circle class="trk" cx="22" cy="22" r="19"/><circle class="ring" id="ur3" cx="22" cy="22" r="19"/></svg><span data-i="d_send"></span></button>
+            <button class="btn2" id="eb3" type="button" data-i="d_erase_s"></button>
+          </div>
+          <input type="file" id="uf3" hidden accept=".mid,.midi,audio/midi,audio/x-midi">
+          <div class="small lim" data-i="d_ok3"></div>
+          <div class="dk-msg" id="um3" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </aside>
+  </section>
+  <iframe id="bridge" src="about:blank" data-src="editor/index.html?bridge=1" allow="midi" title="" tabindex="-1" aria-hidden="true" style="position:fixed;left:0;bottom:0;width:2px;height:2px;border:0;opacity:0;pointer-events:none"></iframe>
+
+  <section id="controles">
+    <h2 class="rv"><span data-i="ct_h"></span> <small class="sub" data-i="ct_sub"></small></h2>
+    <p class="rv" data-i="ct_midi"></p>
+    <p class="small rv" data-i="ct_tip"></p>
+    <p class="small rv" data-i="ct_note"></p>
+  </section>
+
+  <section id="sobre">
+    <div class="strip rv"><i></i><i></i><i></i><i></i></div>
+    <h1 class="rv" data-i="h1"></h1>
+    <p class="lead rv" data-i="lead"></p>
+    <div class="tiles">
+      <div class="tile rv" style="--c: var(--blue)"><b data-i="tile1_b"></b><span data-i="tile1_s"></span></div>
+      <div class="tile rv" style="--c: var(--green)"><b data-i="tile2_b"></b><span data-i="tile2_s"></span></div>
+      <div class="tile rv" style="--c: var(--yellow)"><b data-i="tile3_b"></b><span data-i="tile3_s"></span></div>
+      <div class="tile rv" style="--c: var(--orange)"><b data-i="tile4_b"></b><span data-i="tile4_s"></span></div>
+    </div>
+  </section>
+
+  <section id="novidades">
+    <h2 class="rv" data-i="n_h"></h2>
+    <p class="lead rv" data-i="n_lead"></p>
+<!--CHANGELOG-->
+  </section>
+
+  <section id="instalar">
+    <h2 class="rv" data-i="i_h"></h2>
+    <div class="panel rv">
+      <p data-i="i_p1"></p>
+      <p data-i="i_p2"></p>
+      <p><button class="btn2" id="install2" disabled>Instalar no FM1</button></p>
+      <p class="small" data-i="i_direct"></p>
+    </div>
+    <p class="small rv" data-i="i_beta"></p>
+    <div class="row rv">
+      <a class="ed" href="editor/" data-i="i_editor"></a>
+      <a href="https://github.com/hericdk/fm1-quest" target="_blank" rel="noopener" data-i="i_source" style="align-self:center"></a>
+    </div>
+    <p class="small rv" style="margin-top:16px" data-i="i_brick"></p>
+  </section>
+
+  <section id="voltar">
+    <details id="stockbox" class="rv">
+      <summary data-i="r_sum"></summary>
+      <p class="small" data-i="r_p1"></p>
+      <p class="small"><a href="https://www.m-vave.com/download" target="_blank" rel="noopener">www.m-vave.com/download</a></p>
+      <p class="small" data-i="r_p2"></p>
+      <p><a class="ed" href="editor/" data-i="r_ed"></a></p>
+      <p class="small"><label><input id="stock-saved" type="checkbox"> <span data-i="r_saved"></span></label></p>
+      <p class="small"><label><span data-i="r_file"></span><br><input id="stock-file" type="file" accept=".fwsc"></label></p>
+      <p class="small" id="stock-msg" aria-live="polite"></p>
+      <p><button class="btn2" id="stock-go" disabled data-i="r_go"></button></p>
+      <p class="small" data-i="r_m"></p>
+    </details>
+  </section>
+</main>
+
+<footer>
+  <hr>
+  <p class="love rv" data-i="f_love"></p>
+  <p class="grey rv" data-i="ai"></p>
+  <p class="small rv" style="margin-top:22px" data-i="f_legal"></p>
+</footer>
+
+<script src="assets/js/gsap.min.js"></script>
+<script src="assets/js/ScrollTrigger.min.js"></script>
+<script type="module">
+/*LIB*/
+const $ = (id) => document.getElementById(id);
+const meta = /*META*/;
+const I18N = /*I18N*/;
+
+/* ---------- language: ?lang= in the address, then the saved choice, then the browser ---------- */
+const LANGS = ["pt", "en", "es"];
+let LANG = LANGS.includes(document.documentElement.lang.slice(0, 2)) ? document.documentElement.lang.slice(0, 2) : "pt";     /* each language is its own page (/, /en/, /es/) */
+const tx = (key) => (I18N[key] ? I18N[key][LANG] : "");
+const t = (k) => tx("j_" + k);
+function applyLang(l) {
+  LANG = l; document.documentElement.lang = l === "pt" ? "pt-BR" : l;
+  document.querySelectorAll("[data-i]").forEach((e) => { const v = tx(e.dataset.i); if (v) e.innerHTML = v; });
+  document.querySelectorAll("[data-ia]").forEach((e) => { e.alt = tx(e.dataset.ia); });
+  document.querySelectorAll("[data-it]").forEach((e) => { const [k, a] = e.dataset.it.split(":"); e.setAttribute(a, tx(k)); });
+  document.querySelectorAll("[data-ic]").forEach((e) => { e.setAttribute("content", tx(e.dataset.ic)); });
+  document.title = tx("title");
+  document.querySelectorAll("#lang a").forEach((a) => a.classList.toggle("on", a.dataset.lang === l));
+  if (typeof label === "function") label();
+  const sf = document.getElementById("simframe"); if (sf && sf.contentWindow) { try { sf.contentWindow.postMessage({ fm1lang: l }, "*"); } catch (e) {} }
+  if (window.ScrollTrigger) ScrollTrigger.refresh();
+}
+document.querySelectorAll("#lang a").forEach((a) => a.addEventListener("click", () => { try { localStorage.setItem("fm1lang", a.dataset.lang); } catch (e) {} }));
+
+/* ---------- menu ---------- */
+const menu = (on) => { document.body.classList.toggle("menu", on); $("menubtn").setAttribute("aria-expanded", on); };
+$("menubtn").addEventListener("click", () => menu(!document.body.classList.contains("menu")));
+$("menuclose").addEventListener("click", () => menu(false));
+$("veil").addEventListener("click", () => menu(false));
+document.querySelectorAll("#drawer .nav a").forEach((a) => a.addEventListener("click", () => menu(false)));
+addEventListener("keydown", (e) => { if (e.key === "Escape") menu(false); });
+
+/* ---------- GitHub stars ---------- */
+fetch("https://api.github.com/repos/hericdk/fm1-quest").then((r) => r.ok ? r.json() : null).then((j) => {
+  if (j && typeof j.stargazers_count === "number") { $("starn").textContent = j.stargazers_count; $("stars").hidden = false; }
+}).catch(() => {});
+
+/* ---------- motion (GSAP): the video grows from the middle of the screen; everything else rises and fades in ---------- */
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+function motion() {
+  if (!window.gsap || !window.ScrollTrigger || reduce) { document.documentElement.classList.remove("js"); return; }
+  gsap.registerPlugin(ScrollTrigger);
+  ScrollTrigger.batch(".rv", { start: "top 90%", once: true,
+    onEnter: (els) => gsap.to(els, { opacity: 1, y: 0, duration: .95, ease: "power3.out", stagger: .12, overwrite: true }) });
+  addEventListener("load", () => ScrollTrigger.refresh());
+}
+motion();
+
+/* ---------- installer ---------- */
+const sfr = $("simframe"); if (sfr) sfr.addEventListener("load", () => sfr.contentWindow.postMessage({ fm1lang: LANG }, "*"));
+const simPost = (m) => { try { $("simframe").contentWindow.postMessage(m, "*"); } catch (e) {} };
+const flash = (key, extra = "") => { prog.hidden = false; bar.parentElement.style.display = "none"; st.textContent = tx(key).replace("{n}", extra); clearTimeout(flash.t); flash.t = setTimeout(() => { st.textContent = ""; prog.hidden = true; bar.parentElement.style.display = ""; }, 9000); };
+$("connect").addEventListener("click", async () => {
+  simPost({ fm1cmd: "midi" });
+  if (navigator.requestMIDIAccess) { try { await navigator.requestMIDIAccess({ sysex: true }); } catch (e) { flash("d_conn_perm"); } }   /* the browser asks here, in the page; the hidden editor then inherits the permission */
+  bridgePost({ fm1cmd: "connect" });
+});
+$("sound").addEventListener("click", () => simPost({ fm1cmd: "sound" }));
+$("m-connect").addEventListener("click", () => { menu(false); $("connect").click(); });
+$("m-sound").addEventListener("click", () => { $("sound").click(); });
+addEventListener("message", (e) => { if (e.data && e.data.fm1state) { const on = !!e.data.fm1state.snd; $("sound").classList.toggle("on", on); $("sound").setAttribute("aria-pressed", on); $("sound").setAttribute("aria-label", tx(on ? "ov_snd_off" : "ov_snd_on")); $("sound").title = tx(on ? "ov_snd_off" : "ov_snd_on"); $("m-sound").firstElementChild.textContent = tx(on ? "ov_snd_off" : "ov_snd"); } });
+
+/* ---------- the USB dock: appears only while the FM-1 is connected (the hidden editor reports it); files go to the FM-1 over USB and nowhere else ---------- */
+const bridge = $("bridge"); bridge.src = bridge.dataset.src + "&lang=" + LANG;
+const bridgePost = (m) => { try { bridge.contentWindow.postMessage(m, location.origin); } catch (e) {} };
+const dock = $("dock"), modelo = $("modelo"); let smp = null, upBusy = false;
+const SAMPLE_MAX = 8 * 1024 * 1024, MIDI_MAX = 2 * 1024 * 1024, NSNG = 6;
+const head = async (f, n = 12) => new Uint8Array(await f.slice(0, n).arrayBuffer());
+const ascii = (b, i, n) => String.fromCharCode(...b.slice(i, i + n));
+const KINDS = {                                              /* what each tab accepts: the extension AND the first bytes must agree */
+  sample: { ext: /\.(wav|mp3|ogg|oga|flac|m4a|aac)$/i, max: SAMPLE_MAX, magic: (b) => (ascii(b, 0, 4) === "RIFF" && ascii(b, 8, 4) === "WAVE") || ascii(b, 0, 3) === "ID3" || (b[0] === 0xFF && (b[1] & 0xE0) === 0xE0) || ascii(b, 0, 4) === "OggS" || ascii(b, 0, 4) === "fLaC" || ascii(b, 4, 4) === "ftyp" },
+  midi: { ext: /\.(mid|midi)$/i, max: MIDI_MAX, magic: (b) => ascii(b, 0, 4) === "MThd" },
+};
+async function acceptFile(f, kind) { if (!f) return "bad"; const K = KINDS[kind]; if (f.size > K.max) return "big"; if (!K.ext.test(f.name)) return "bad"; return K.magic(await head(f)) ? "ok" : "bad"; }
+/* the three tabs: 1 = samples (USR1..3), 2 = Piano Hero songs, 3 = FM Hero songs; each remembers the chosen place */
+const TAB = { 1: { sel: 0, btn: "upbtn", ring: "upring", msg: "upmsg", file: "upfile", er: "erbtn", grid: "flasks", sp: "spaceTxt" }, 2: { sel: 0, kind: 0, btn: "ub2", ring: "ur2", msg: "um2", file: "uf2", er: "eb2", grid: "sg2", sp: "sp2" }, 3: { sel: 0, kind: 1, btn: "ub3", ring: "ur3", msg: "um3", file: "uf3", er: "eb3", grid: "sg3", sp: "sp3" } };
+const ICON = { ok: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#5aae52"/><path d="M6.5 12.5l3.6 3.6 7.4-7.6" fill="none" stroke="#10260f" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>', bad: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#d0583f"/><path d="M8 8l8 8M16 8l-8 8" fill="none" stroke="#2e0f08" stroke-width="2.6" stroke-linecap="round"/></svg>', info: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#7a7ac0"/><path d="M12 11v6M12 7.2v.1" fill="none" stroke="#14142e" stroke-width="2.6" stroke-linecap="round"/></svg>' };
+const OKKEY = ["d_done", "d_erased", "d_trim"];
+const sayRaw = (p, text, kind) => { const e = $(TAB[p].msg); e.className = "dk-msg" + (text ? " show " + kind : ""); e.innerHTML = text ? ICON[kind] + "<span></span>" : ""; if (text) e.lastChild.textContent = text; };
+const say = (p, key, extra = "", bad = false) => sayRaw(p, key ? tx(key).replace("{n}", extra) : "", bad ? "bad" : OKKEY.includes(key) ? "ok" : "info");
+const upMsg = (key, extra = "", bad = false) => say(1, key, extra, bad);
+const songsOf = (p) => { const G = smp && smp.sng; return G ? G.songs.slice(TAB[p].kind * NSNG, TAB[p].kind * NSNG + NSNG) : null; };
+const used = (p, i) => (p === 1 ? !!(smp && smp.smp && smp.smp.slots[i].zones) : !!(songsOf(p) && songsOf(p)[i].notes));
+const firstFree = (p) => { const n = p === 1 ? 3 : NSNG; for (let i = 0; i < n; i++) if (!used(p, i)) return i; return -1; };
+const plabel = (p, i) => (p === 1 ? "USR" + (i + 1) : (p === 2 ? "PIANO " : "HERO ") + (i + 1));
+let firstPaint = true, pvOn = -1;
+function paintDock() {
+  const ok = !!(smp && smp.connected); dock.hidden = !ok; modelo.classList.toggle("with-dock", ok); if (window.ScrollTrigger) ScrollTrigger.refresh();
+  if (!ok) { firstPaint = true; return; }
+  if (firstPaint && (smp.smp || smp.sng)) { firstPaint = false; [1, 2, 3].forEach((p) => { const f = firstFree(p); if (f >= 0) TAB[p].sel = f; }); }   /* the first free place is chosen for you */
+  if (smp.smp) {
+    const S = smp.smp, tot = S.slotKiB * S.slots.length, u = S.slots.reduce((a, x) => a + x.kib, 0), slot = TAB[1].sel;
+    $("spaceTxt").textContent = u + " / " + tot + " KiB  (USR" + (slot + 1) + ": " + S.slots[slot].kib + " / " + S.slotKiB + ")";
+    $("flasks").innerHTML = S.slots.map((x, i) => `<div class="flask${i === slot ? " on" : ""}" data-s="${i}"><i><b style="height:${Math.min(100, x.kib / S.slotKiB * 100)}%"></b></i>USR${i + 1}<br>${x.zones ? (x.name || "—") : tx("d_empty")}</div>`).join("");
+    $("erbtn").disabled = upBusy || !S.slots[slot].zones; $("upbtn").disabled = upBusy; $("pv1").disabled = upBusy || !(smp.prev && smp.prev[slot]); $("pv1").textContent = tx(pvOn === slot ? "d_pause" : "d_play");
+  }
+  [2, 3].forEach((p) => {
+    const L = songsOf(p), T = TAB[p], old = !L;
+    $("sg" + p).innerHTML = old ? "" : L.map((x, i) => `<div class="flask${i === T.sel ? " on" : ""}" data-s="${i}"><i><b style="height:${Math.min(100, x.notes / 960 * 100)}%"></b></i>${i + 1}<br>${x.notes ? (x.name || "—") : tx("d_empty")}</div>`).join("");
+    $("sp" + p).textContent = old ? tx("d_old_fw") : L.filter((x) => x.notes).length + " / " + NSNG + (L[T.sel].notes ? "  (" + (p === 2 ? "PIANO " : "HERO ") + (T.sel + 1) + ": " + L[T.sel].notes + " notes, " + L[T.sel].bpm + " bpm)" : "");
+    $(T.btn).disabled = upBusy || old; $(T.er).disabled = upBusy || old || !L[T.sel].notes;
+  });
+  [1, 2, 3].forEach((p) => { if (TAB[p].adv && used(p, TAB[p].sel)) { const f = firstFree(p); if (f >= 0) TAB[p].sel = f; TAB[p].adv = false; } });   /* after a send: the next free place */
+  [1, 2, 3].forEach((p) => $(TAB[p].grid).querySelectorAll(".flask").forEach((el) => { el.onclick = () => { TAB[p].sel = +el.dataset.s; paintDock(); }; }));
+  if (!upBusy) [1, 2, 3].forEach((p) => { const e = $(TAB[p].msg); if (!e.textContent && p !== 1 && smp.sng && firstFree(p) < 0) say(p, "d_full", "", false); });
+}
+const ringOff = (p) => { $(TAB[p].ring).style.strokeDashoffset = "119.4"; $(TAB[p].btn).classList.remove("spin"); };
+addEventListener("message", (e) => {
+  if (e.origin !== location.origin || !e.data || !e.data.fm1br) return; const m = e.data, p = m.p || 1;
+  if (m.fm1br === "state") { smp = m; paintDock(); }
+  else if (m.fm1br === "progress") { $(TAB[p].ring).style.strokeDashoffset = String(119.4 * (1 - m.v)); }
+  else if (m.fm1br === "uploading") { upBusy = true; $(TAB[p].btn).classList.add("spin"); $(TAB[p].btn).disabled = true; say(p, "d_sending"); }
+  else if (m.fm1br === "uploaded") { upBusy = false; ringOff(p); if (m.ok) { say(p, "d_done", plabel(p, m.k)); if (p === 1 && TAB[1].trim) { sayRaw(1, tx("d_done").replace("{n}", plabel(1, m.k)) + " " + tx("d_trim").replace("{n}", TAB[1].trim), "ok"); TAB[1].trim = 0; } TAB[p].adv = true; } else say(p, "d_fail", "", true); paintDock(); }
+  else if (m.fm1br === "error") {
+    if (m.cmd === "connect") { const c = String(m.message).replace(/^connect:/, ""); flash(c === "nodevice" ? "d_conn_none" : c === "denied" ? "d_conn_perm" : c === "noreply" ? "d_conn_noreply" : "d_conn_fail", c.replace(/^error/, "")); return; }
+    upBusy = false; ringOff(p);
+    const KEYS = { "too-big": "d_toobig", "bad-file": "d_bad", "song:toomany": "d_s_many", "song:empty": "d_s_empty", "song:notMidi": "d_bad", "song:division": "d_s_smpte", "song:toolong": "d_s_long", "no-songs": "d_old_fw" };
+    const key = KEYS[m.message]; if (key) say(p, key, "", true); else sayRaw(p, tx("d_fail") + (m.message || "?"), "bad"); paintDock();
+  }
+  else if (m.fm1br === "preview") { pvOn = m.playing ? m.k : -1; paintDock(); }
+  else if (m.fm1br === "trimmed") { TAB[1].trim = m.secs; }
+  else if (m.fm1br === "erased") { say(p, "d_erased", plabel(p, m.k)); paintDock(); }
+});
+document.querySelectorAll(".dk-tabs button").forEach((b) => b.addEventListener("click", () => { document.querySelectorAll(".dk-tabs button").forEach((x) => x.classList.toggle("on", x === b)); [1, 2, 3].forEach((n) => { $("pane" + n).hidden = String(n) !== b.dataset.tab; }); }));
+const dt = $("dockToggle");
+dt.addEventListener("click", () => { const min = modelo.classList.toggle("min"); dt.setAttribute("aria-expanded", String(!min)); dt.setAttribute("aria-label", tx(min ? "d_show" : "d_hide")); if (window.ScrollTrigger) ScrollTrigger.refresh(); });
+$("pv1").addEventListener("click", () => { bridgePost({ fm1cmd: "preview", k: TAB[1].sel }); });
+[1, 2, 3].forEach((p) => {
+  const T = TAB[p], kind = p === 1 ? "sample" : "midi";
+  $(T.btn).addEventListener("click", () => {
+    if (upBusy) return;
+    if (used(p, T.sel) && !confirm(tx("d_over_q").replace("{n}", plabel(p, T.sel)).replace("{name}", p === 1 ? (smp.smp.slots[T.sel].name || "—") : (songsOf(p)[T.sel].name || "—")))) return;   /* a place in use: ask before writing over it */
+    $(T.file).click();
+  });
+  $(T.file).addEventListener("change", async () => {
+    const f = $(T.file).files[0]; $(T.file).value = ""; if (!f || upBusy) return; const r = await acceptFile(f, kind);
+    if (r === "big") { say(p, "d_big", "", true); return; } if (r !== "ok") { say(p, "d_bad", "", true); return; }
+    say(p, "d_sending");
+    if (p === 1) bridgePost({ fm1cmd: "send-sample", k: T.sel, file: f });                  /* same origin, the editor's own code encodes it and writes it over USB */
+    else bridgePost({ fm1cmd: "send-song", kind: T.kind, k: T.sel, p, file: f });
+  });
+  $(T.er).addEventListener("click", () => {
+    if (upBusy) return; if (!confirm(tx(p === 1 ? "d_erase_q" : "d_erase_s_q").replace("{n}", p === 1 ? String(T.sel + 1) : plabel(p, T.sel)))) return;
+    if (p === 1) bridgePost({ fm1cmd: "erase-sample", k: T.sel }); else bridgePost({ fm1cmd: "erase-song", kind: T.kind, k: T.sel, p });
+  });
+});
+
+const prog = $("prog"), bar = $("bar"), st = $("status");
+const setStatus = (txt, kind = "") => { st.textContent = txt; st.title = txt; st.className = kind; prog.hidden = false; };
+const setBar = (v, kind = "") => { bar.firstElementChild.style.width = Math.max(0, Math.min(100, v)) + "%"; bar.className = kind; };
+const logEl = $("log");
+const log = (s) => { logEl.textContent += s + "\n"; };
+let image = null, writing = false, stock = null;
+
+/* the log stays hidden until something goes wrong; then it opens above the 3D model */
+const showLog = () => { $("logsec").hidden = false; $("navlog").hidden = false; logEl.classList.add("bad"); scrollTo({ top: 0, behavior: "smooth" }); if (window.ScrollTrigger) ScrollTrigger.refresh(); };
+const afterRun = () => { $("rollback").hidden = false; };            /* after an install, successful or not, the way back is offered */
+const sayK = (k, arg = "") => setStatus(t(k) + arg);
+const short = (m) => String(m).split(/(?<=\.)\s/)[0];                  /* the status line gets the first sentence; the whole text goes to the log */
+const hasMsg = (c) => !!I18N["j_" + c];
+const failed = (e) => {
+  if (e && e.code === "notfound") { setBar(0); setStatus(t("plugmsg")); st.dataset.plug = "1"; plugLabel(true); return; }   /* just not plugged in: not an error, no log */
+  const code = e && e.code && hasMsg(e.code) ? e.code : null;
+  const full = code ? t(code) + (e.detail || "") : (e && e.message) || t("unknown");
+  setStatus(t("error") + short(full) + t("seelog"), "bad"); log(full);
+  setBar(100, "bad");
+  log("[" + new Date().toISOString() + "] " + String((e && e.stack) || e)); showLog();
+  afterRun();
+};
+/* the button label follows the USB connection: "Instalar no FM1" with the FM-1 plugged in, "Plugue o FM1" without it */
+let midiAccess = null;
+const hasFM1 = (a) => [...a.inputs.values(), ...a.outputs.values()].some((p) => p.state === "connected" && /felucca|fm-?1|ota-|vave|sloop/i.test(p.name || ""));
+const plugLabel = (plug) => { const txt = plug ? t("plug") : t("install"); $("install").textContent = $("install2").textContent = txt; $("install").classList.toggle("plug", plug); };
+function label() { plugLabel(!!(midiAccess && !hasFM1(midiAccess))); }
+window.label = label;
+const watch = (a) => { midiAccess = a; a.onstatechange = () => { label(); if (hasFM1(a) && st.dataset.plug) { st.dataset.plug = ""; setStatus(""); prog.hidden = true; } }; label(); };
+if (navigator.permissions && navigator.permissions.query) {            /* already allowed on an earlier visit: watch the USB without asking again */
+  navigator.permissions.query({ name: "midi", sysex: true }).then((p) => { if (p.state === "granted") navigator.requestMIDIAccess({ sysex: true }).then(watch).catch(() => {}); }).catch(() => {});
+}
+const lockAll = (on) => {
+  writing = on;
+  $("install").disabled = $("install2").disabled = on || !image;
+  $("stock-go").disabled = on || !stock || !$("stock-saved").checked; $("stock-file").disabled = on;
+};
+addEventListener("beforeunload", (e) => { if (writing) { e.preventDefault(); e.returnValue = t("leave"); } });
+
+applyLang(LANG);
+
+/* ---------- load and check the package ---------- */
+(async () => {
+  if (!navigator.requestMIDIAccess) { setStatus(t("nomidi"), "bad"); return; }
+  try {
+    const r = await fetch(meta.pkg);
+    if (!r.ok) throw new Error(`${meta.pkg}: HTTP ${r.status}`);
+    const pkg = new Uint8Array(await r.arrayBuffer());
+    if (productOf(pkg) !== meta.product) { setStatus(t("badpkg"), "bad"); return; }
+    if (meta.sha256 && self.crypto && crypto.subtle) {      /* a damaged download is never offered (the loader checks its CRC too) */
+      const h = [...new Uint8Array(await crypto.subtle.digest("SHA-256", pkg))].map((b) => b.toString(16).padStart(2, "0")).join("");
+      if (h !== meta.sha256) { setStatus(t("badpkg"), "bad"); log(`sha256 ${h}, expected ${meta.sha256}`); showLog(); return; }
+    }
+    image = logicalImage(pkg);
+    lockAll(writing);
+  } catch (e) { setStatus(t("loadfail") + e.message, "bad"); log(String(e)); showLog(); }
+})();
+
+const total = 74 + 1179;                                   /* reads: step 1, step 2 (head + app area, SLOOP 2.0 loader) */
+const step = (k, a) => {
+  log(`${k} ${a ?? ""}`);
+  if (k === "start") { setBar(2); sayK("start"); }
+  if (k === "verify") { sayK("verify"); setBar((a / total) * 100); }
+  if (k === "loader") sayK("loader");
+  if (k === "write") { sayK("write"); setBar(((74 + a) / total) * 100); }
+  if (k === "reboot") sayK("reboot");
+  if (k === "done") { setBar(100, "ok"); setStatus(t("done") + ". " + t("replug"), "ok"); }
+};
+const stopped = () => { setStatus(t("stopped"), "bad"); setBar(100, "bad"); log(t("interrupted")); showLog(); };
+
+async function runInstall() {
+  if (writing || !image) return;
+  lockAll(true); setBar(0); setStatus(t("start"));
+  simPost({ fm1cmd: "midioff" }); bridgePost({ fm1cmd: "disconnect" });                     /* the 3D model and the upload panel let go of the MIDI ports: only the installer talks to the FM-1 while it writes */
+  let midi;
+  try { midi = midiAccess || await navigator.requestMIDIAccess({ sysex: true }); }
+  catch (e) { setStatus(t("error") + short(t("denied")) + t("seelog"), "bad"); log(t("denied")); setBar(100, "bad"); log(String(e)); showLog(); afterRun(); lockAll(false); return; }
+  if (!midiAccess) watch(midi);
+  try {
+    const up = new Updater(midi, log);
+    const ota = await up.find((id) => /^ota-/i.test(id.model));
+    if (ota) {
+      ota.link.close();
+      if (await up.resume(image, step)) { setBar(100, "ok"); setStatus(t("done") + ". " + t("replug"), "ok"); } else stopped();
+    } else {
+      await up.install(image, meta.product, step);
+    }
+    afterRun();
+  } catch (e) { failed(e); }
+  lockAll(false);
+}
+$("install").addEventListener("click", runInstall);
+$("install2").addEventListener("click", runInstall);
+
+/* ---------- back to the official V15: only the exact official file, a backup first, the same update path as M-UPGRADE ---------- */
+$("rollback").addEventListener("click", () => { $("stockbox").open = true; $("voltar").scrollIntoView({ behavior: "smooth" }); });
+$("stock-saved").addEventListener("change", () => lockAll(writing));
+$("stock-file").addEventListener("change", async () => {
+  const f = $("stock-file").files[0]; stock = null; $("stock-msg").textContent = ""; lockAll(writing);
+  if (!f) return;
+  try { stock = await validateStockPackage(new Uint8Array(await f.arrayBuffer())); $("stock-msg").textContent = t("stockValid"); }
+  catch (e) { $("stock-msg").textContent = t("stockBad") + e.message; }
+  lockAll(writing);
+});
+$("stock-go").addEventListener("click", async () => {
+  if (writing || !stock || !$("stock-saved").checked || !confirm(t("stockConfirm"))) return;
+  lockAll(true); setBar(0); setStatus(t("start")); simPost({ fm1cmd: "midioff" }); bridgePost({ fm1cmd: "disconnect" });
+  let midi;
+  try { midi = midiAccess || await navigator.requestMIDIAccess({ sysex: true }); }
+  catch (e) { setStatus(t("error") + short(t("denied")) + t("seelog"), "bad"); log(t("denied")); setBar(100, "bad"); log(String(e)); showLog(); lockAll(false); return; }
+  if (!midiAccess) watch(midi);
+  try {
+    const up = new Updater(midi, log);
+    const ota = await up.find((id) => /^ota-/i.test(id.model));
+    if (ota) {
+      ota.link.close();
+      if (OUR_LOADER(ota.id)) setStatus(t("stockFinish"), "bad");           /* the FM1 Quest loader: finish that update first (Install) */
+      else if (await up.resume(stock.image, step, { product: stock.product })) { setBar(100, "ok"); setStatus(t("done") + ". " + t("replug"), "ok"); } else stopped();
+    } else {
+      await up.install(stock.image, stock.product, step);
+    }
+  } catch (e) { failed(e); }
+  lockAll(false);
+});
+</script>
+</body>
+</html>

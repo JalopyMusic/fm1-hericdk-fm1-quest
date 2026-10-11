@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
 """FM1 Quest fonts, through the firmware's font pipeline (tools/gen_font.py: same header format, same glyph encoding):
-  Q   Pixelify Sans, body text, 8 px (README: 8 px at 1x), anti-aliased (16 alpha levels), Latin-1 32..255
+  P   Pixelify Sans, body text, 14 px
   QT  Jacquarda Bastarda 9, titles, 16 px, 32..126 (Title Case: README, all-caps blackletter is unreadable)
 tools/gen_quest_font.py build/gen/felucca_qfont.h   (TTFs in assets/fonts/, SIL OFL 1.1)
 At 8 px a hard threshold breaks Pixelify's letters, so Q is rendered anti-aliased; QT keeps hard pixels."""
@@ -31,7 +31,7 @@ def render_aa(ttf, px, scale, pixel, first, last):
 
 G.PAD = 1                      # one pixel of side bearing is enough at 8 / 16 px (the stock fonts use 2)
 G.render = render_aa
-G.SIZES[:] = [("Q", "PixelifySans-400.ttf", 8, 1, False, 32, 126), ("QT", "JacquardaBastarda9.ttf", 16, 1, True, 32, 126)]
+G.SIZES[:] = [("QT", "JacquardaBastarda9.ttf", 16, 1, True, 32, 126), ("P", "PixelifySans-400.ttf", 14, 1, False, 32, 126)]
 G.main(sys.argv[1])
 out = Path(sys.argv[1])
 out.write_text(out.read_text().replace("#define FONT_PAD 1  /* x scale for L, see below */\n", ""))      # felucca_font.h defines it
